@@ -72,5 +72,11 @@ chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
   }
 });
 
+// Check notification permission on install
+chrome.runtime.onInstalled.addListener(async () => {
+  const permLevel = await chrome.notifications.getPermissionLevel();
+  await chrome.storage.local.set({ notificationPermission: permLevel });
+});
+
 // On service worker restart, verify alarm exists
 verifyAlarmExists();
