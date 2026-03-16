@@ -1,8 +1,6 @@
 import { getState, setState, trimHistory } from './utils/storage';
 import { createCheckInRecord, todayDateString } from './utils/types';
 
-export const IDLE_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 hours
-
 export async function handleActiveState(): Promise<void> {
   const state = await getState();
   const now = Date.now();

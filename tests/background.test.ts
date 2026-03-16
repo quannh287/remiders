@@ -1,4 +1,4 @@
-import { handleActiveState, IDLE_THRESHOLD_MS } from '../src/background';
+import { handleActiveState } from '../src/background';
 import { AppState, createDefaultAppState, DEFAULT_SETTINGS } from '../src/utils/types';
 
 let mockState: AppState;

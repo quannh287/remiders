@@ -63,28 +63,38 @@ function render(state: AppState): void {
 
     const progress = calculateProgress(state.today.checkInTime, state.today.expectedCheckoutTime, Date.now());
     progressEl.style.width = `${progress}%`;
+
+    updateCountdownCache(state.today.checkInTime, state.today.expectedCheckoutTime);
   } else {
     checkinEl.textContent = '--:--';
     lunchEl.textContent = `${state.settings.lunchBreakMinutes} phut`;
     checkoutEl.textContent = '--:--';
     remainingEl.textContent = '--';
     progressEl.style.width = '0%';
+
+    updateCountdownCache(null, null);
   }
 }
 
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
+let cachedCheckIn: number | null = null;
+let cachedCheckout: number | null = null;
 
 function startCountdown(): void {
   if (countdownInterval) clearInterval(countdownInterval);
-  countdownInterval = setInterval(async () => {
-    const state = await getState();
-    if (state.today) {
-      const remaining = state.today.expectedCheckoutTime - Date.now();
+  countdownInterval = setInterval(() => {
+    if (cachedCheckIn !== null && cachedCheckout !== null) {
+      const remaining = cachedCheckout - Date.now();
       document.getElementById('remaining-time')!.textContent = formatRemaining(remaining);
-      const progress = calculateProgress(state.today.checkInTime, state.today.expectedCheckoutTime, Date.now());
+      const progress = calculateProgress(cachedCheckIn, cachedCheckout, Date.now());
       document.getElementById('progress-fill')!.style.width = `${progress}%`;
     }
   }, 1000);
+}
+
+function updateCountdownCache(checkIn: number | null, checkout: number | null): void {
+  cachedCheckIn = checkIn;
+  cachedCheckout = checkout;
 }
 
 function bindEvents(): void {
@@ -198,4 +208,11 @@ async function checkNotificationPermission(): Promise<void> {
   } else {
     warning.classList.add('hidden');
   }
+
+  document.getElementById('btn-enable-notify')!.addEventListener('click', () => {
+    // Chrome extensions can't open chrome:// URLs directly
+    // Show instructions in the warning area instead
+    const warning = document.getElementById('notification-warning')!;
+    warning.innerHTML = '<span>Go to Chrome Settings &gt; Privacy &gt; Notifications and enable for this extension</span>';
+  });
 }
