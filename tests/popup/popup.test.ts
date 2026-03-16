@@ -1,4 +1,5 @@
-import { formatTime, formatRemaining, calculateProgress } from '../../src/popup/popup';
+import { formatTime, formatRemaining, calculateProgress, applyManualCheckIn } from '../../src/popup/popup';
+import { createDefaultAppState, AppState } from '../../src/utils/types';
 
 describe('popup helpers', () => {
   describe('formatTime', () => {
@@ -47,5 +48,47 @@ describe('popup helpers', () => {
     it('caps at 100', () => {
       expect(calculateProgress(1000, 2000, 5000)).toBe(100);
     });
+  });
+});
+
+describe('applyManualCheckIn', () => {
+  it('creates a new check-in when state.today is null', () => {
+    const state = createDefaultAppState();
+    const checkInTime = new Date('2026-03-16T08:25:00').getTime();
+
+    const result = applyManualCheckIn(state, checkInTime);
+
+    expect(result.today).not.toBeNull();
+    expect(result.today!.checkInTime).toBe(checkInTime);
+    expect(result.today!.manualOverride).toBe(true);
+    expect(result.today!.date).toBe('2026-03-16');
+    expect(result.today!.expectedCheckoutTime).toBeGreaterThan(checkInTime);
+  });
+
+  it('updates existing check-in when state.today exists', () => {
+    const state = createDefaultAppState();
+    state.today = {
+      date: '2026-03-16',
+      checkInTime: new Date('2026-03-16T08:00:00').getTime(),
+      expectedCheckoutTime: new Date('2026-03-16T17:00:00').getTime(),
+      manualOverride: false,
+    };
+    const newCheckInTime = new Date('2026-03-16T08:25:00').getTime();
+
+    const result = applyManualCheckIn(state, newCheckInTime);
+
+    expect(result.today!.checkInTime).toBe(newCheckInTime);
+    expect(result.today!.manualOverride).toBe(true);
+  });
+
+  it('recalculates expectedCheckoutTime with settings', () => {
+    const state = createDefaultAppState();
+    state.settings.lunchBreakMinutes = 90;
+    const checkInTime = new Date('2026-03-16T08:00:00').getTime();
+
+    const result = applyManualCheckIn(state, checkInTime);
+
+    const expected = checkInTime + (8 * 60 + 90) * 60 * 1000;
+    expect(result.today!.expectedCheckoutTime).toBe(expected);
   });
 });

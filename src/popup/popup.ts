@@ -22,6 +22,26 @@ export function calculateProgress(checkIn: number, checkout: number, now: number
   return Math.max(0, Math.min(100, pct));
 }
 
+export function applyManualCheckIn(state: AppState, checkInTime: number): AppState {
+  const d = new Date(checkInTime);
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  if (!state.today) {
+    state.today = {
+      date: dateStr,
+      checkInTime,
+      expectedCheckoutTime: calculateCheckoutTime(checkInTime, state.settings.lunchBreakMinutes),
+      manualOverride: true,
+    };
+  } else {
+    state.today.checkInTime = checkInTime;
+    state.today.expectedCheckoutTime = calculateCheckoutTime(checkInTime, state.settings.lunchBreakMinutes);
+    state.today.manualOverride = true;
+  }
+
+  return state;
+}
+
 // --- DOM interaction (only runs in browser) ---
 
 function isInBrowser(): boolean {
@@ -116,27 +136,13 @@ function bindEvents(): void {
 
     const now = new Date();
     now.setHours(hours, minutes, 0, 0);
-    const newCheckInTime = now.getTime();
-
-    if (!state.today) {
-      // No check-in yet — create one manually
-      state.today = {
-        date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-        checkInTime: newCheckInTime,
-        expectedCheckoutTime: calculateCheckoutTime(newCheckInTime, state.settings.lunchBreakMinutes),
-        manualOverride: true,
-      };
-    } else {
-      state.today.checkInTime = newCheckInTime;
-      state.today.expectedCheckoutTime = calculateCheckoutTime(newCheckInTime, state.settings.lunchBreakMinutes);
-      state.today.manualOverride = true;
-    }
+    applyManualCheckIn(state, now.getTime());
     await setState(state);
 
     // Recreate alarm
     await chrome.alarms.clear('checkout-reminder');
     chrome.alarms.create('checkout-reminder', {
-      when: state.today.expectedCheckoutTime - state.settings.notifyBeforeMinutes * 60000,
+      when: state.today!.expectedCheckoutTime - state.settings.notifyBeforeMinutes * 60000,
     });
 
     document.getElementById('edit-checkin-row')!.classList.add('hidden');
