@@ -47,7 +47,7 @@ reminder/
 interface CheckInRecord {
   date: string;                  // "2026-03-16"
   checkInTime: number;           // timestamp (ms)
-  expectedCheckoutTimeTime: number;   // calculated checkout timestamp
+  expectedCheckoutTime: number;   // calculated checkout timestamp
   manualOverride: boolean;       // true if user manually edited check-in time
 }
 
@@ -161,7 +161,7 @@ MV3 service workers are ephemeral — they can be terminated at any time and res
 - Read `history` array from storage
 - Generate downloadable file:
   - **JSON**: direct serialization of `CheckInRecord[]`
-  - **CSV**: columns: `date, checkInTime, expectedCheckoutTimeTime, manualOverride` — timestamps formatted as `HH:mm` local time
+  - **CSV**: columns: `date, checkInTime, expectedCheckoutTime, manualOverride` — timestamps formatted as `HH:mm` local time
 - Trigger browser download via `Blob` + `URL.createObjectURL`
 
 ## Edge Cases
