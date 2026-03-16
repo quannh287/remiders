@@ -113,14 +113,24 @@ function bindEvents(): void {
     if (isNaN(hours) || isNaN(minutes)) return;
 
     const state = await getState();
-    if (!state.today) return;
 
-    const newCheckIn = new Date(state.today.checkInTime);
-    newCheckIn.setHours(hours, minutes, 0, 0);
+    const now = new Date();
+    now.setHours(hours, minutes, 0, 0);
+    const newCheckInTime = now.getTime();
 
-    state.today.checkInTime = newCheckIn.getTime();
-    state.today.expectedCheckoutTime = calculateCheckoutTime(newCheckIn.getTime(), state.settings.lunchBreakMinutes);
-    state.today.manualOverride = true;
+    if (!state.today) {
+      // No check-in yet — create one manually
+      state.today = {
+        date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+        checkInTime: newCheckInTime,
+        expectedCheckoutTime: calculateCheckoutTime(newCheckInTime, state.settings.lunchBreakMinutes),
+        manualOverride: true,
+      };
+    } else {
+      state.today.checkInTime = newCheckInTime;
+      state.today.expectedCheckoutTime = calculateCheckoutTime(newCheckInTime, state.settings.lunchBreakMinutes);
+      state.today.manualOverride = true;
+    }
     await setState(state);
 
     // Recreate alarm
