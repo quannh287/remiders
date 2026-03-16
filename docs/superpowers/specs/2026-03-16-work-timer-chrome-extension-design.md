@@ -47,7 +47,7 @@ reminder/
 interface CheckInRecord {
   date: string;                  // "2026-03-16"
   checkInTime: number;           // timestamp (ms)
-  checkOutTime: number | null;   // timestamp when user clicks checkout (optional)
+  expectedCheckoutTimeTime: number;   // calculated checkout timestamp
   manualOverride: boolean;       // true if user manually edited check-in time
 }
 
@@ -58,7 +58,7 @@ interface Settings {
 
 interface AppState {
   today: CheckInRecord | null;
-  history: CheckInRecord[];      // previous days' records
+  history: CheckInRecord[];      // previous days' records, max 90 days
   settings: Settings;
   lastActiveTimestamp: number;   // last time user was detected as active
 }
@@ -67,7 +67,7 @@ interface AppState {
 ### Checkout Calculation
 
 ```
-expectedCheckout = checkInTime + (8 * 60 + lunchBreakMinutes) * 60 * 1000
+expectedCheckoutTime = checkInTime + (8 * 60 + lunchBreakMinutes) * 60 * 1000
 ```
 
 Check-in time + 8 hours of work + lunch break duration = checkout time.
@@ -83,19 +83,31 @@ Check-in time + 8 hours of work + lunch break duration = checkout time.
    - Calculate `timeSinceLastActive = Date.now() - lastActiveTimestamp`
    - Update `lastActiveTimestamp = Date.now()`
 
-**Check-in triggers (both conditions must be true):**
-- `timeSinceLastActive > 4 hours` (14,400,000 ms)
-- Current date differs from `today.date`
+**Check-in triggers:**
+- If current date differs from `today.date` → always create new check-in (handles short overnight gaps)
+- If `timeSinceLastActive > 4 hours` AND date differs → also creates new check-in (redundant but explicit)
+- `"idle"` and `"locked"` states from `onStateChanged` are intentionally ignored — only `"active"` triggers logic
 
 **When creating a new check-in:**
-1. If `today` exists for a previous date → move it to `history` array
+1. If `today` exists for a previous date → move it to `history` array, trim history to 90 entries
 2. Create new `CheckInRecord` with `checkInTime = Date.now()`
-3. Calculate `expectedCheckout`
-4. Create alarm: `chrome.alarms.create("checkout-reminder", { when: expectedCheckout - notifyBeforeMinutes * 60000 })`
+3. Calculate `expectedCheckoutTime`
+4. Create alarm: `chrome.alarms.create("checkout-reminder", { when: expectedCheckoutTime - notifyBeforeMinutes * 60000 })`
 5. Save to storage
 
 **First-time install / no existing data:**
 - When `today` is `null` and state becomes `"active"` → create check-in immediately
+
+### Service Worker Lifecycle
+
+MV3 service workers are ephemeral — they can be terminated at any time and restarted on events. All state MUST be persisted in `chrome.storage.local`, never held in memory variables across events.
+
+**On every service worker start:**
+1. Call `chrome.idle.setDetectionInterval(300)` — must re-register on every start, not just on install
+2. Verify alarm exists via `chrome.alarms.get("checkout-reminder")` — if today has a check-in but alarm is missing, recreate it
+3. All event listeners (`chrome.idle.onStateChanged`, `chrome.alarms.onAlarm`) are registered at top-level scope
+
+**Why `chrome.alarms` works:** Alarms survive service worker restarts — Chrome manages them independently. This is why we use alarms instead of `setTimeout`.
 
 ### Alarm & Notification
 
@@ -140,7 +152,7 @@ Check-in time + 8 hours of work + lunch break duration = checkout time.
 - On save:
   - Update `checkInTime` in `CheckInRecord`
   - Set `manualOverride = true`
-  - Recalculate `expectedCheckout`
+  - Recalculate `expectedCheckoutTime`
   - Clear and recreate alarm with new timing
   - Update UI
 
@@ -149,7 +161,7 @@ Check-in time + 8 hours of work + lunch break duration = checkout time.
 - Read `history` array from storage
 - Generate downloadable file:
   - **JSON**: direct serialization of `CheckInRecord[]`
-  - **CSV**: columns: `date, checkInTime, checkOutTime, manualOverride`
+  - **CSV**: columns: `date, checkInTime, expectedCheckoutTimeTime, manualOverride` — timestamps formatted as `HH:mm` local time
 - Trigger browser download via `Blob` + `URL.createObjectURL`
 
 ## Edge Cases
@@ -160,3 +172,6 @@ Check-in time + 8 hours of work + lunch break duration = checkout time.
 4. **Extension installed mid-day**: First `"active"` state creates check-in immediately
 5. **Settings changed after check-in**: Recalculate checkout time and reset alarm
 6. **Notification blocked at OS level**: Show warning in popup UI with instructions to enable
+7. **After checkout time passes**: Countdown shows `0h 0m`, progress bar stays at 100%
+8. **Timezone**: All dates and times use the local timezone of the machine
+9. **History cleanup**: When archiving a day, trim `history` to max 90 entries (oldest removed first)
