@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="date" id="current-date"></h1>
+    </header>
+
+    <section class="info-panel">
+      <div class="info-row">
+        <span class="label">Check-in:</span>
+        <span class="value" id="checkin-time"></span>
+        <button class="btn-icon" id="btn-edit-checkin" title="Edit">&#9998;</button>
+      </div>
+      <div class="info-row edit-row hidden" id="edit-checkin-row">
+        <input type="time" id="checkin-input">
+        <button class="btn-small" id="btn-save-checkin">Save</button>
+        <button class="btn-small" id="btn-cancel-checkin">Cancel</button>
+      </div>
+      <div class="info-row">
+        <span class="label">Lunch break:</span>
+        <span class="value" id="lunch-break"></span>
+      </div>
+      <div class="info-row">
+        <span class="label">Checkout:</span>
+        <span class="value" id="checkout-time"></span>
+      </div>
+      <div class="info-row">
+        <span class="label">Remaining:</span>
+        <span class="value countdown" id="remaining-time"></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </section>
+
+    <div class="notification-warning hidden" id="notification-warning">
+      <span>Notifications are disabled</span>
+      <button class="btn-small" id="btn-enable-notify">Enable</button>
+    </div>
+
+    <footer class="footer">
+      <select id="export-format">
+        <option value="csv">CSV</option>
+        <option value="json">JSON</option>
+      </select>
+      <button class="btn" id="btn-export">Export</button>
+      <button class="btn" id="btn-settings">Settings</button>
+    </footer>
+
+    <section class="settings-panel hidden" id="settings-panel">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <label for="setting-lunch">Lunch break (minutes):</label>
+        <input type="number" id="setting-lunch" min="0" max="180">
+      </div>
+      <div class="setting-row">
+        <label for="setting-notify">Notify before (minutes):</label>
+        <input type="number" id="setting-notify" min="1" max="60">
+      </div>
+      <button class="btn" id="btn-save-settings">Save</button>
+    </section>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
