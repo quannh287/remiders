@@ -1,4 +1,4 @@
-import { formatTime, formatRemaining, calculateProgress, applyManualCheckIn } from '../../src/popup/popup';
+import { formatTime, formatRemaining, calculateProgress, applyManualCheckIn, checkInNow } from '../../src/popup/popup';
 import { createDefaultAppState, AppState } from '../../src/utils/types';
 
 describe('popup helpers', () => {
@@ -90,5 +90,33 @@ describe('applyManualCheckIn', () => {
 
     const expected = checkInTime + (8 * 60 + 90) * 60 * 1000;
     expect(result.today!.expectedCheckoutTime).toBe(expected);
+  });
+});
+
+describe('checkInNow', () => {
+  it('creates check-in record with current time when state.today is null', () => {
+    const state = createDefaultAppState();
+    const before = Date.now();
+    const result = checkInNow(state);
+    const after = Date.now();
+
+    expect(result.today).not.toBeNull();
+    expect(result.today!.checkInTime).toBeGreaterThanOrEqual(before);
+    expect(result.today!.checkInTime).toBeLessThanOrEqual(after);
+    expect(result.today!.manualOverride).toBe(false);
+  });
+
+  it('does not overwrite existing check-in', () => {
+    const state = createDefaultAppState();
+    const existingTime = new Date('2026-03-18T08:00:00').getTime();
+    state.today = {
+      date: '2026-03-18',
+      checkInTime: existingTime,
+      expectedCheckoutTime: existingTime + 9 * 60 * 60 * 1000,
+      manualOverride: false,
+    };
+
+    const result = checkInNow(state);
+    expect(result.today!.checkInTime).toBe(existingTime);
   });
 });

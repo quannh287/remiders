@@ -42,6 +42,19 @@ export function applyManualCheckIn(state: AppState, checkInTime: number): AppSta
   return state;
 }
 
+export function checkInNow(state: AppState): AppState {
+  if (state.today) return state;
+  const now = Date.now();
+  const d = new Date(now);
+  state.today = {
+    date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+    checkInTime: now,
+    expectedCheckoutTime: calculateCheckoutTime(now, state.settings.lunchBreakMinutes),
+    manualOverride: false,
+  };
+  return state;
+}
+
 // --- DOM interaction (only runs in browser) ---
 
 function isInBrowser(): boolean {
@@ -58,8 +71,31 @@ async function init(): Promise<void> {
   const state = await getState();
   render(state);
   startCountdown();
+  updateClock();
+  startClockInterval();
   bindEvents();
   checkNotificationPermission();
+}
+
+function updateClock(): void {
+  const now = new Date();
+  const hours = now.getHours() % 12;
+  const minutes = now.getMinutes();
+
+  const hourDeg = hours * 30 + minutes * 0.5;
+  const minuteDeg = minutes * 6;
+
+  const hourHand = document.getElementById('clock-hour');
+  const minuteHand = document.getElementById('clock-minute');
+  if (hourHand) hourHand.setAttribute('transform', `rotate(${hourDeg} 12 12)`);
+  if (minuteHand) minuteHand.setAttribute('transform', `rotate(${minuteDeg} 12 12)`);
+}
+
+let clockInterval: ReturnType<typeof setInterval> | null = null;
+
+function startClockInterval(): void {
+  if (clockInterval) clearInterval(clockInterval);
+  clockInterval = setInterval(updateClock, 60000);
 }
 
 function render(state: AppState): void {
