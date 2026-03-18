@@ -30,6 +30,7 @@ let mockState: AppState;
   },
   runtime: {
     onInstalled: { addListener: jest.fn() },
+    onStartup: { addListener: jest.fn() },
   },
 };
 

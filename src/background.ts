@@ -50,6 +50,10 @@ chrome.idle.onStateChanged.addListener(async (newState: 'active' | 'idle' | 'loc
   }
 });
 
+chrome.runtime.onStartup.addListener(async () => {
+  await handleActiveState();
+});
+
 export async function handleCheckoutAlarm(): Promise<void> {
   const permLevel = await chrome.notifications.getPermissionLevel();
   if (permLevel === 'granted') {

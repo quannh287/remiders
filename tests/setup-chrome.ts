@@ -23,5 +23,6 @@
   },
   runtime: {
     onInstalled: { addListener: () => {} },
+    onStartup: { addListener: () => {} },
   },
 };
