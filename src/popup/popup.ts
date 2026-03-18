@@ -69,28 +69,53 @@ function render(state: AppState): void {
   const checkoutEl = document.getElementById('checkout-time')!;
   const remainingEl = document.getElementById('remaining-time')!;
   const progressEl = document.getElementById('progress-fill')!;
+  const progressPctEl = document.getElementById('progress-pct')!;
+  const progressStartEl = document.getElementById('progress-start')!;
+  const progressEndEl = document.getElementById('progress-end')!;
+  const statusBadge = document.getElementById('status-badge')!;
+  const statusText = document.getElementById('status-text')!;
 
   const today = new Date();
-  dateEl.textContent = today.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  dateEl.textContent = today.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 
   if (state.today) {
     checkinEl.textContent = formatTime(state.today.checkInTime);
-    lunchEl.textContent = `${state.settings.lunchBreakMinutes} phut`;
+    lunchEl.textContent = `${state.settings.lunchBreakMinutes}m`;
     checkoutEl.textContent = formatTime(state.today.expectedCheckoutTime);
+    progressStartEl.textContent = formatTime(state.today.checkInTime);
+    progressEndEl.textContent = formatTime(state.today.expectedCheckoutTime);
 
     const remaining = state.today.expectedCheckoutTime - Date.now();
     remainingEl.textContent = formatRemaining(remaining);
+    remainingEl.classList.toggle('countdown-value--overtime', remaining <= 0);
+    remainingEl.classList.toggle('countdown-value--done', remaining <= 0);
 
     const progress = calculateProgress(state.today.checkInTime, state.today.expectedCheckoutTime, Date.now());
     progressEl.style.width = `${progress}%`;
+    progressEl.classList.toggle('progress-fill--overtime', progress >= 100);
+    progressPctEl.textContent = `${progress}%`;
+
+    // Update status badge
+    statusBadge.classList.remove('status-badge--inactive');
+    statusBadge.classList.add('status-badge--active');
+    statusText.textContent = remaining <= 0 ? 'Done' : 'Working';
 
     updateCountdownCache(state.today.checkInTime, state.today.expectedCheckoutTime);
   } else {
     checkinEl.textContent = '--:--';
-    lunchEl.textContent = `${state.settings.lunchBreakMinutes} phut`;
+    lunchEl.textContent = `${state.settings.lunchBreakMinutes}m`;
     checkoutEl.textContent = '--:--';
-    remainingEl.textContent = '--';
+    remainingEl.textContent = '--:--';
+    remainingEl.classList.remove('countdown-value--overtime', 'countdown-value--done');
     progressEl.style.width = '0%';
+    progressEl.classList.remove('progress-fill--overtime');
+    progressPctEl.textContent = '0%';
+    progressStartEl.textContent = '--:--';
+    progressEndEl.textContent = '--:--';
+
+    statusBadge.classList.remove('status-badge--active');
+    statusBadge.classList.add('status-badge--inactive');
+    statusText.textContent = 'Idle';
 
     updateCountdownCache(null, null);
   }
@@ -105,9 +130,19 @@ function startCountdown(): void {
   countdownInterval = setInterval(() => {
     if (cachedCheckIn !== null && cachedCheckout !== null) {
       const remaining = cachedCheckout - Date.now();
-      document.getElementById('remaining-time')!.textContent = formatRemaining(remaining);
+      const remainingEl = document.getElementById('remaining-time')!;
+      remainingEl.textContent = formatRemaining(remaining);
+      remainingEl.classList.toggle('countdown-value--overtime', remaining <= 0);
+      remainingEl.classList.toggle('countdown-value--done', remaining <= 0);
+
       const progress = calculateProgress(cachedCheckIn, cachedCheckout, Date.now());
-      document.getElementById('progress-fill')!.style.width = `${progress}%`;
+      const progressEl = document.getElementById('progress-fill')!;
+      progressEl.style.width = `${progress}%`;
+      progressEl.classList.toggle('progress-fill--overtime', progress >= 100);
+      document.getElementById('progress-pct')!.textContent = `${progress}%`;
+
+      const statusText = document.getElementById('status-text')!;
+      statusText.textContent = remaining <= 0 ? 'Done' : 'Working';
     }
   }, 1000);
 }
@@ -118,8 +153,8 @@ function updateCountdownCache(checkIn: number | null, checkout: number | null): 
 }
 
 function bindEvents(): void {
-  // Edit check-in
-  document.getElementById('btn-edit-checkin')!.addEventListener('click', () => {
+  // Edit check-in — click the card
+  document.getElementById('card-checkin')!.addEventListener('click', () => {
     document.getElementById('edit-checkin-row')!.classList.remove('hidden');
   });
 
@@ -165,7 +200,7 @@ function bindEvents(): void {
   document.getElementById('btn-save-settings')!.addEventListener('click', async () => {
     const lunch = parseInt((document.getElementById('setting-lunch') as HTMLInputElement).value);
     const notify = parseInt((document.getElementById('setting-notify') as HTMLInputElement).value);
-    if (isNaN(lunch) || isNaN(notify)) return;
+    if (isNaN(lunch) || isNaN(notify) || lunch < 0 || lunch > 180 || notify < 1 || notify > 60) return;
 
     const state = await updateSettings({ lunchBreakMinutes: lunch, notifyBeforeMinutes: notify });
 
@@ -182,6 +217,19 @@ function bindEvents(): void {
 
     document.getElementById('settings-panel')!.classList.add('hidden');
     render(state);
+  });
+
+  // Enable notifications
+  document.getElementById('btn-enable-notify')!.addEventListener('click', () => {
+    const warning = document.getElementById('notification-warning')!;
+    warning.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Go to Chrome Settings &gt; Privacy &gt; Notifications and enable for this extension</span>
+    `;
   });
 
   // Export
@@ -224,11 +272,4 @@ async function checkNotificationPermission(): Promise<void> {
   } else {
     warning.classList.add('hidden');
   }
-
-  document.getElementById('btn-enable-notify')!.addEventListener('click', () => {
-    // Chrome extensions can't open chrome:// URLs directly
-    // Show instructions in the warning area instead
-    const warning = document.getElementById('notification-warning')!;
-    warning.innerHTML = '<span>Go to Chrome Settings &gt; Privacy &gt; Notifications and enable for this extension</span>';
-  });
 }

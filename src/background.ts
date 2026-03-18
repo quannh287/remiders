@@ -1,27 +1,35 @@
 import { getState, setState, trimHistory } from './utils/storage';
 import { createCheckInRecord, todayDateString } from './utils/types';
 
+let processing = false;
+
 export async function handleActiveState(): Promise<void> {
-  const state = await getState();
-  const now = Date.now();
-  const today = todayDateString();
+  if (processing) return;
+  processing = true;
+  try {
+    const state = await getState();
+    const now = Date.now();
+    const today = todayDateString();
 
-  state.lastActiveTimestamp = now;
+    state.lastActiveTimestamp = now;
 
-  if (state.today === null) {
-    // First install or no data — create check-in
-    state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
-    createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
-  } else if (state.today.date !== today) {
-    // New day — archive old record, create new check-in
-    state.history.push(state.today);
-    trimHistory(state);
-    state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
-    createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
+    if (state.today === null) {
+      // First install or no data — create check-in
+      state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
+      createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
+    } else if (state.today.date !== today) {
+      // New day — archive old record, create new check-in
+      state.history.push(state.today);
+      trimHistory(state);
+      state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
+      createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
+    }
+    // Same day — just update lastActiveTimestamp (already done above)
+
+    await setState(state);
+  } finally {
+    processing = false;
   }
-  // Same day — just update lastActiveTimestamp (already done above)
-
-  await setState(state);
 }
 
 function createCheckoutAlarm(expectedCheckoutTime: number, notifyBeforeMinutes: number): void {
@@ -44,7 +52,8 @@ export async function handleCheckoutAlarm(): Promise<void> {
   const permLevel = await chrome.notifications.getPermissionLevel();
   if (permLevel === 'granted') {
     const state = await getState();
-    const mins = state.settings.notifyBeforeMinutes;
+    const remainingMs = state.today ? state.today.expectedCheckoutTime - Date.now() : 0;
+    const mins = Math.max(0, Math.round(remainingMs / 60000));
     chrome.notifications.create('checkout-notify', {
       type: 'basic',
       iconUrl: 'icons/icon48.png',

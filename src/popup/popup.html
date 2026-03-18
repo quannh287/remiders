@@ -6,63 +6,159 @@
 </head>
 <body>
   <div class="container">
+    <!-- Header -->
     <header class="header">
-      <h1 class="date" id="current-date"></h1>
+      <div class="header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="header-text">
+        <div class="header-title">Work Timer</div>
+        <div class="header-date" id="current-date"></div>
+      </div>
+      <div class="status-badge status-badge--inactive" id="status-badge">
+        <span class="status-dot"></span>
+        <span id="status-text">Idle</span>
+      </div>
     </header>
 
-    <section class="info-panel">
-      <div class="info-row">
-        <span class="label">Check-in:</span>
-        <span class="value" id="checkin-time"></span>
-        <button class="btn-icon" id="btn-edit-checkin" title="Edit">&#9998;</button>
-      </div>
-      <div class="info-row edit-row hidden" id="edit-checkin-row">
-        <input type="time" id="checkin-input">
-        <button class="btn-small" id="btn-save-checkin">Save</button>
-        <button class="btn-small" id="btn-cancel-checkin">Cancel</button>
-      </div>
-      <div class="info-row">
-        <span class="label">Lunch break:</span>
-        <span class="value" id="lunch-break"></span>
-      </div>
-      <div class="info-row">
-        <span class="label">Checkout:</span>
-        <span class="value" id="checkout-time"></span>
-      </div>
-      <div class="info-row">
-        <span class="label">Remaining:</span>
-        <span class="value countdown" id="remaining-time"></span>
+    <!-- Countdown Hero -->
+    <div class="countdown-hero">
+      <div class="countdown-label">Time remaining</div>
+      <div class="countdown-value" id="remaining-time">--:--</div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-labels">
+        <span class="progress-label" id="progress-start">--:--</span>
+        <span class="progress-label" id="progress-end">--:--</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" id="progress-fill"></div>
       </div>
-    </section>
-
-    <div class="notification-warning hidden" id="notification-warning">
-      <span>Notifications are disabled</span>
-      <button class="btn-small" id="btn-enable-notify">Enable</button>
     </div>
 
+    <!-- Info Cards -->
+    <div class="info-grid">
+      <div class="info-card info-card--editable" id="card-checkin" title="Click to edit">
+        <div class="info-card__label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          Check-in
+        </div>
+        <div class="info-card__value" id="checkin-time">--:--</div>
+        <div class="info-card__edit-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card__label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Checkout
+        </div>
+        <div class="info-card__value" id="checkout-time">--:--</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card__label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+            <line x1="6" y1="1" x2="6" y2="4"/>
+            <line x1="10" y1="1" x2="10" y2="4"/>
+          </svg>
+          Lunch
+        </div>
+        <div class="info-card__value" id="lunch-break">--</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card__label">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="20" x2="12" y2="10"/>
+            <line x1="18" y1="20" x2="18" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="16"/>
+          </svg>
+          Progress
+        </div>
+        <div class="info-card__value" id="progress-pct">0%</div>
+      </div>
+    </div>
+
+    <!-- Edit Check-in (hidden by default) -->
+    <div class="edit-row hidden" id="edit-checkin-row">
+      <input type="time" id="checkin-input" aria-label="Check-in time">
+      <button class="btn btn--primary btn--sm" id="btn-save-checkin">Save</button>
+      <button class="btn btn--sm" id="btn-cancel-checkin">Cancel</button>
+    </div>
+
+    <!-- Notification Warning -->
+    <div class="notification-warning hidden" id="notification-warning">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>Notifications are disabled</span>
+      <button class="btn btn--sm btn--danger" id="btn-enable-notify">Enable</button>
+    </div>
+
+    <!-- Footer Actions -->
     <footer class="footer">
-      <select id="export-format">
+      <select id="export-format" aria-label="Export format">
         <option value="csv">CSV</option>
         <option value="json">JSON</option>
       </select>
-      <button class="btn" id="btn-export">Export</button>
-      <button class="btn" id="btn-settings">Settings</button>
+      <button class="btn" id="btn-export">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export
+      </button>
+      <button class="btn" id="btn-settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
     </footer>
 
+    <!-- Settings Panel -->
     <section class="settings-panel hidden" id="settings-panel">
-      <h2>Settings</h2>
+      <div class="settings-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <h2>Settings</h2>
+      </div>
       <div class="setting-row">
-        <label for="setting-lunch">Lunch break (minutes):</label>
+        <label for="setting-lunch">Lunch break (minutes)</label>
         <input type="number" id="setting-lunch" min="0" max="180">
       </div>
       <div class="setting-row">
-        <label for="setting-notify">Notify before (minutes):</label>
+        <label for="setting-notify">Notify before (minutes)</label>
         <input type="number" id="setting-notify" min="1" max="60">
       </div>
-      <button class="btn" id="btn-save-settings">Save</button>
+      <div class="settings-actions">
+        <button class="btn btn--primary btn--sm" id="btn-save-settings">Save Settings</button>
+      </div>
     </section>
   </div>
 
