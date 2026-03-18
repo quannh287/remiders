@@ -111,10 +111,15 @@ function render(state: AppState): void {
   const statusBadge = document.getElementById('status-badge')!;
   const statusText = document.getElementById('status-text')!;
 
+  const emptyState = document.getElementById('empty-state')!;
+  const mainContent = document.getElementById('main-content')!;
+
   const today = new Date();
   dateEl.textContent = today.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 
   if (state.today) {
+    emptyState.classList.add('hidden');
+    mainContent.classList.remove('hidden');
     checkinEl.textContent = formatTime(state.today.checkInTime);
     lunchEl.textContent = `${state.settings.lunchBreakMinutes}m`;
     checkoutEl.textContent = formatTime(state.today.expectedCheckoutTime);
@@ -138,6 +143,8 @@ function render(state: AppState): void {
 
     updateCountdownCache(state.today.checkInTime, state.today.expectedCheckoutTime);
   } else {
+    emptyState.classList.remove('hidden');
+    mainContent.classList.add('hidden');
     checkinEl.textContent = '--:--';
     lunchEl.textContent = `${state.settings.lunchBreakMinutes}m`;
     checkoutEl.textContent = '--:--';
@@ -189,6 +196,47 @@ function updateCountdownCache(checkIn: number | null, checkout: number | null): 
 }
 
 function bindEvents(): void {
+  // Check in now
+  document.getElementById('btn-checkin-now')!.addEventListener('click', async () => {
+    const state = await getState();
+    checkInNow(state);
+    await setState(state);
+
+    chrome.alarms.create('checkout-reminder', {
+      when: state.today!.expectedCheckoutTime - state.settings.notifyBeforeMinutes * 60000,
+    });
+
+    render(state);
+  });
+
+  // Toggle manual check-in input
+  document.getElementById('btn-checkin-manual-toggle')!.addEventListener('click', () => {
+    document.getElementById('manual-checkin-row')!.classList.remove('hidden');
+  });
+
+  document.getElementById('btn-manual-checkin-cancel')!.addEventListener('click', () => {
+    document.getElementById('manual-checkin-row')!.classList.add('hidden');
+  });
+
+  // Save manual check-in from empty state
+  document.getElementById('btn-manual-checkin-save')!.addEventListener('click', async () => {
+    const input = document.getElementById('manual-checkin-input') as HTMLInputElement;
+    const [hours, minutes] = input.value.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return;
+
+    const state = await getState();
+    const now = new Date();
+    now.setHours(hours, minutes, 0, 0);
+    applyManualCheckIn(state, now.getTime());
+    await setState(state);
+
+    chrome.alarms.create('checkout-reminder', {
+      when: state.today!.expectedCheckoutTime - state.settings.notifyBeforeMinutes * 60000,
+    });
+
+    render(state);
+  });
+
   // Edit check-in — click the card
   document.getElementById('card-checkin')!.addEventListener('click', () => {
     document.getElementById('edit-checkin-row')!.classList.remove('hidden');
