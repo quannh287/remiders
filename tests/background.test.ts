@@ -144,6 +144,30 @@ describe('handleActiveState', () => {
 
     expect(mockState.lastActiveTimestamp).toBe(new Date('2026-03-16T10:00:00').getTime());
   });
+
+  it('does not auto check-in outside work hours (before 6:00)', async () => {
+    jest.setSystemTime(new Date('2026-03-18T05:30:00'));
+    await handleActiveState();
+    expect(mockState.today).toBeNull();
+  });
+
+  it('does not auto check-in outside work hours (after 11:00)', async () => {
+    jest.setSystemTime(new Date('2026-03-18T14:00:00'));
+    await handleActiveState();
+    expect(mockState.today).toBeNull();
+  });
+
+  it('still updates lastActiveTimestamp outside work hours when record exists', async () => {
+    jest.setSystemTime(new Date('2026-03-18T14:00:00'));
+    mockState.today = {
+      date: '2026-03-18',
+      checkInTime: new Date('2026-03-18T08:00:00').getTime(),
+      expectedCheckoutTime: new Date('2026-03-18T17:00:00').getTime(),
+      manualOverride: false,
+    };
+    await handleActiveState();
+    expect(mockState.lastActiveTimestamp).toBe(new Date('2026-03-18T14:00:00').getTime());
+  });
 });
 
 describe('verifyAlarmExists', () => {

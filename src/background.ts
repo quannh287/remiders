@@ -18,18 +18,15 @@ export async function handleActiveState(): Promise<void> {
 
     state.lastActiveTimestamp = now;
 
-    if (state.today === null) {
-      // First install or no data — create check-in
+    if (state.today === null && isWithinWorkHours()) {
       state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
       createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
-    } else if (state.today.date !== today) {
-      // New day — archive old record, create new check-in
+    } else if (state.today && state.today.date !== today && isWithinWorkHours()) {
       state.history.push(state.today);
       trimHistory(state);
       state.today = createCheckInRecord(now, state.settings.lunchBreakMinutes);
       createCheckoutAlarm(state.today.expectedCheckoutTime, state.settings.notifyBeforeMinutes);
     }
-    // Same day — just update lastActiveTimestamp (already done above)
 
     await setState(state);
   } finally {
