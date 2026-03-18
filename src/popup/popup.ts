@@ -68,11 +68,13 @@ if (isInBrowser()) {
 }
 
 async function init(): Promise<void> {
+  // Start clock immediately — doesn't depend on state
+  updateClock();
+  startClockInterval();
+
   const state = await getState();
   render(state);
   startCountdown();
-  updateClock();
-  startClockInterval();
   bindEvents();
   checkNotificationPermission();
 }
@@ -87,8 +89,45 @@ function updateClock(): void {
 
   const hourHand = document.getElementById('clock-hour');
   const minuteHand = document.getElementById('clock-minute');
-  if (hourHand) hourHand.setAttribute('transform', `rotate(${hourDeg} 12 12)`);
-  if (minuteHand) minuteHand.setAttribute('transform', `rotate(${minuteDeg} 12 12)`);
+  if (hourHand) hourHand.setAttribute('transform', `rotate(${hourDeg} 100 100)`);
+  if (minuteHand) minuteHand.setAttribute('transform', `rotate(${minuteDeg} 100 100)`);
+
+  // Update progress arc and remaining text
+  updateClockProgress();
+}
+
+function updateClockProgress(): void {
+  const arc = document.getElementById('clock-progress-arc');
+  const arcOvertime = document.getElementById('clock-progress-arc-overtime');
+  const remainingEl = document.getElementById('remaining-time');
+  if (!arc || !remainingEl || !arcOvertime) return;
+
+  const circumference = 2 * Math.PI * 90; // r=90
+
+  if (cachedCheckIn !== null && cachedCheckout !== null) {
+    const progress = calculateProgress(cachedCheckIn, cachedCheckout, Date.now());
+    const remaining = cachedCheckout - Date.now();
+    const offset = circumference - (circumference * Math.min(progress, 100)) / 100;
+
+    if (progress >= 100) {
+      arc.classList.add('hidden');
+      arcOvertime.classList.remove('hidden');
+      arcOvertime.setAttribute('stroke-dashoffset', '0');
+      remainingEl.setAttribute('fill', '#EF4444');
+    } else {
+      arc.classList.remove('hidden');
+      arcOvertime.classList.add('hidden');
+      arc.setAttribute('stroke-dashoffset', String(offset));
+      remainingEl.setAttribute('fill', '#2563EB');
+    }
+
+    remainingEl.textContent = formatRemaining(remaining);
+  } else {
+    arc.setAttribute('stroke-dashoffset', String(circumference));
+    arcOvertime.classList.add('hidden');
+    remainingEl.textContent = '--:--';
+    remainingEl.setAttribute('fill', '#94A3B8');
+  }
 }
 
 let clockInterval: ReturnType<typeof setInterval> | null = null;
@@ -103,11 +142,9 @@ function render(state: AppState): void {
   const checkinEl = document.getElementById('checkin-time')!;
   const lunchEl = document.getElementById('lunch-break')!;
   const checkoutEl = document.getElementById('checkout-time')!;
-  const remainingEl = document.getElementById('remaining-time')!;
-  const progressEl = document.getElementById('progress-fill')!;
-  const progressPctEl = document.getElementById('progress-pct')!;
   const progressStartEl = document.getElementById('progress-start')!;
   const progressEndEl = document.getElementById('progress-end')!;
+  const progressPctEl = document.getElementById('progress-pct')!;
   const statusBadge = document.getElementById('status-badge')!;
   const statusText = document.getElementById('status-text')!;
 
@@ -127,13 +164,7 @@ function render(state: AppState): void {
     progressEndEl.textContent = formatTime(state.today.expectedCheckoutTime);
 
     const remaining = state.today.expectedCheckoutTime - Date.now();
-    remainingEl.textContent = formatRemaining(remaining);
-    remainingEl.classList.toggle('countdown-value--overtime', remaining <= 0);
-    remainingEl.classList.toggle('countdown-value--done', remaining <= 0);
-
     const progress = calculateProgress(state.today.checkInTime, state.today.expectedCheckoutTime, Date.now());
-    progressEl.style.width = `${progress}%`;
-    progressEl.classList.toggle('progress-fill--overtime', progress >= 100);
     progressPctEl.textContent = `${progress}%`;
 
     // Update status badge
@@ -148,10 +179,6 @@ function render(state: AppState): void {
     checkinEl.textContent = '--:--';
     lunchEl.textContent = `${state.settings.lunchBreakMinutes}m`;
     checkoutEl.textContent = '--:--';
-    remainingEl.textContent = '--:--';
-    remainingEl.classList.remove('countdown-value--overtime', 'countdown-value--done');
-    progressEl.style.width = '0%';
-    progressEl.classList.remove('progress-fill--overtime');
     progressPctEl.textContent = '0%';
     progressStartEl.textContent = '--:--';
     progressEndEl.textContent = '--:--';
@@ -162,6 +189,9 @@ function render(state: AppState): void {
 
     updateCountdownCache(null, null);
   }
+
+  // Update clock display immediately
+  updateClockProgress();
 }
 
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -173,19 +203,13 @@ function startCountdown(): void {
   countdownInterval = setInterval(() => {
     if (cachedCheckIn !== null && cachedCheckout !== null) {
       const remaining = cachedCheckout - Date.now();
-      const remainingEl = document.getElementById('remaining-time')!;
-      remainingEl.textContent = formatRemaining(remaining);
-      remainingEl.classList.toggle('countdown-value--overtime', remaining <= 0);
-      remainingEl.classList.toggle('countdown-value--done', remaining <= 0);
-
       const progress = calculateProgress(cachedCheckIn, cachedCheckout, Date.now());
-      const progressEl = document.getElementById('progress-fill')!;
-      progressEl.style.width = `${progress}%`;
-      progressEl.classList.toggle('progress-fill--overtime', progress >= 100);
-      document.getElementById('progress-pct')!.textContent = `${progress}%`;
 
-      const statusText = document.getElementById('status-text')!;
-      statusText.textContent = remaining <= 0 ? 'Done' : 'Working';
+      document.getElementById('progress-pct')!.textContent = `${progress}%`;
+      document.getElementById('status-text')!.textContent = remaining <= 0 ? 'Done' : 'Working';
+
+      // Update clock arc and remaining text
+      updateClockProgress();
     }
   }, 1000);
 }
