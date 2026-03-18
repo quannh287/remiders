@@ -9,9 +9,24 @@
     <!-- Header -->
     <header class="header">
       <div class="header-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="clock-svg">
+          <!-- Face -->
+          <circle cx="12" cy="12" r="10" stroke-width="2"/>
+          <!-- Hour ticks -->
+          <line x1="12" y1="2.5" x2="12" y2="4" stroke-width="1.5"/>
+          <line x1="19.07" y1="4.93" x2="18.01" y2="5.99" stroke-width="1"/>
+          <line x1="21.5" y1="12" x2="20" y2="12" stroke-width="1.5"/>
+          <line x1="19.07" y1="19.07" x2="18.01" y2="18.01" stroke-width="1"/>
+          <line x1="12" y1="21.5" x2="12" y2="20" stroke-width="1.5"/>
+          <line x1="4.93" y1="19.07" x2="5.99" y2="18.01" stroke-width="1"/>
+          <line x1="2.5" y1="12" x2="4" y2="12" stroke-width="1.5"/>
+          <line x1="4.93" y1="4.93" x2="5.99" y2="5.99" stroke-width="1"/>
+          <!-- Hour hand -->
+          <line id="clock-hour" x1="12" y1="12" x2="12" y2="7" stroke-width="2.5" class="clock-hand clock-hand--hour"/>
+          <!-- Minute hand -->
+          <line id="clock-minute" x1="12" y1="12" x2="12" y2="5" stroke-width="2" class="clock-hand clock-hand--minute"/>
+          <!-- Center dot -->
+          <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
         </svg>
       </div>
       <div class="header-text">
@@ -23,6 +38,30 @@
         <span id="status-text">Idle</span>
       </div>
     </header>
+
+    <!-- Empty State (shown when no check-in) -->
+    <div class="empty-state hidden" id="empty-state">
+      <div class="empty-state__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="empty-state__text">Chưa check-in hôm nay</div>
+      <button class="btn btn--primary" id="btn-checkin-now">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Check in now
+      </button>
+      <button class="btn btn--ghost btn--sm" id="btn-checkin-manual-toggle">Nhập giờ khác</button>
+      <div class="empty-state__manual hidden" id="manual-checkin-row">
+        <input type="time" id="manual-checkin-input" aria-label="Manual check-in time">
+        <button class="btn btn--primary btn--sm" id="btn-manual-checkin-save">Save</button>
+        <button class="btn btn--sm" id="btn-manual-checkin-cancel">Cancel</button>
+      </div>
+    </div>
 
     <!-- Countdown Hero -->
     <div class="countdown-hero">
