@@ -3,11 +3,22 @@
     "allow": [
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(find /Users/quannh2871/Development/reminder -maxdepth 3 -not -path */.* -type f)",
+      "Read(//Users/quannh2871/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.2/skills/subagent-driven-development/**)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx jest:*)",
+      "Bash(node -e \":*)",
+      "Bash(sips -z 16 16 icon.png --out src/icons/icon16.png)",
+      "Bash(sips -z 48 48 icon.png --out src/icons/icon48.png)",
+      "Bash(sips -z 128 128 icon.png --out src/icons/icon128.png)",
+      "Bash(npx webpack:*)"
     ]
   },
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
-    "superpowers@superpowers-marketplace": true
+    "superpowers@superpowers-marketplace": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }
