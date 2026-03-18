@@ -22,6 +22,9 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyBeforeMinutes: 15,
 };
 
+export const AUTO_CHECKIN_HOUR_START = 6;
+export const AUTO_CHECKIN_HOUR_END = 11;
+
 export function calculateCheckoutTime(checkInTime: number, lunchBreakMinutes: number): number {
   return checkInTime + (8 * 60 + lunchBreakMinutes) * 60 * 1000;
 }
