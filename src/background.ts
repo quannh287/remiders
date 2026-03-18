@@ -1,5 +1,10 @@
 import { getState, setState, trimHistory } from './utils/storage';
-import { createCheckInRecord, todayDateString } from './utils/types';
+import { createCheckInRecord, todayDateString, AUTO_CHECKIN_HOUR_START, AUTO_CHECKIN_HOUR_END } from './utils/types';
+
+export function isWithinWorkHours(): boolean {
+  const hour = new Date().getHours();
+  return hour >= AUTO_CHECKIN_HOUR_START && hour < AUTO_CHECKIN_HOUR_END;
+}
 
 let processing = false;
 

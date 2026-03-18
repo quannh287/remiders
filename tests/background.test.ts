@@ -1,4 +1,4 @@
-import { handleActiveState } from '../src/background';
+import { handleActiveState, isWithinWorkHours } from '../src/background';
 import { AppState, createDefaultAppState, DEFAULT_SETTINGS } from '../src/utils/types';
 
 let mockState: AppState;
@@ -203,5 +203,37 @@ describe('handleCheckoutAlarm', () => {
     await handleCheckoutAlarm();
 
     expect(chrome.notifications.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('isWithinWorkHours', () => {
+  it('returns true at 6:00', () => {
+    jest.setSystemTime(new Date('2026-03-18T06:00:00'));
+    expect(isWithinWorkHours()).toBe(true);
+  });
+
+  it('returns true at 10:59', () => {
+    jest.setSystemTime(new Date('2026-03-18T10:59:00'));
+    expect(isWithinWorkHours()).toBe(true);
+  });
+
+  it('returns false at 11:00', () => {
+    jest.setSystemTime(new Date('2026-03-18T11:00:00'));
+    expect(isWithinWorkHours()).toBe(false);
+  });
+
+  it('returns false at 5:59', () => {
+    jest.setSystemTime(new Date('2026-03-18T05:59:00'));
+    expect(isWithinWorkHours()).toBe(false);
+  });
+
+  it('returns false at 2:00 (late night)', () => {
+    jest.setSystemTime(new Date('2026-03-18T02:00:00'));
+    expect(isWithinWorkHours()).toBe(false);
+  });
+
+  it('returns true at 8:30 (typical morning)', () => {
+    jest.setSystemTime(new Date('2026-03-18T08:30:00'));
+    expect(isWithinWorkHours()).toBe(true);
   });
 });
