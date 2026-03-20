@@ -366,7 +366,7 @@ function bindEvents(): void {
   document.getElementById('btn-test-notify')!.addEventListener('click', () => {
     chrome.notifications.create('test-notify', {
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: 'Work Timer',
       message: 'Notification hoạt động bình thường!',
     });
