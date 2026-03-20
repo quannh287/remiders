@@ -266,8 +266,15 @@ function bindEvents(): void {
   });
 
   // Edit check-in — click the card
-  document.getElementById('card-checkin')!.addEventListener('click', () => {
+  document.getElementById('card-checkin')!.addEventListener('click', async () => {
     document.getElementById('edit-checkin-row')!.classList.remove('hidden');
+    const state = await getState();
+    if (state.today) {
+      const d = new Date(state.today.checkInTime);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      (document.getElementById('checkin-input') as HTMLInputElement).value = `${hh}:${mm}`;
+    }
   });
 
   document.getElementById('btn-cancel-checkin')!.addEventListener('click', () => {
@@ -364,11 +371,17 @@ function bindEvents(): void {
 
   // Test notification
   document.getElementById('btn-test-notify')!.addEventListener('click', () => {
+    console.log('[test-notify] button clicked');
+    console.log('[test-notify] iconUrl:', chrome.runtime.getURL('icons/icon48.png'));
     chrome.notifications.create('test-notify', {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: 'Work Timer',
       message: 'Notification hoạt động bình thường!',
+    }).then((id) => {
+      console.log('[test-notify] created, id:', id);
+    }).catch((err) => {
+      console.error('[test-notify] error:', err);
     });
   });
 }
@@ -380,11 +393,14 @@ async function checkNotificationPermission(): Promise<void> {
 
   try {
     const level = await chrome.notifications.getPermissionLevel();
+    console.log('[checkNotificationPermission] level:', level);
     granted = isNotificationGranted(level);
-  } catch {
+  } catch (err) {
+    console.error('[checkNotificationPermission] error:', err);
     granted = false;
   }
 
+  console.log('[checkNotificationPermission] granted:', granted);
   if (granted) {
     warning.classList.add('hidden');
     testBtn.classList.remove('hidden');
