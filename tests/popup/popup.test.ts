@@ -1,4 +1,4 @@
-import { formatTime, formatRemaining, calculateProgress, applyManualCheckIn, checkInNow } from '../../src/popup/popup';
+import { formatTime, formatRemaining, calculateProgress, applyManualCheckIn, checkInNow, isNotificationGranted } from '../../src/popup/popup';
 import { createDefaultAppState, AppState } from '../../src/utils/types';
 
 describe('popup helpers', () => {
@@ -118,5 +118,19 @@ describe('checkInNow', () => {
 
     const result = checkInNow(state);
     expect(result.today!.checkInTime).toBe(existingTime);
+  });
+});
+
+describe('isNotificationGranted', () => {
+  it('returns true for granted', () => {
+    expect(isNotificationGranted('granted')).toBe(true);
+  });
+
+  it('returns false for denied', () => {
+    expect(isNotificationGranted('denied')).toBe(false);
+  });
+
+  it('returns false for any other string', () => {
+    expect(isNotificationGranted('unknown')).toBe(false);
   });
 });
