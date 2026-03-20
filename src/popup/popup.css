@@ -126,6 +126,20 @@ body {
   color: var(--color-success);
 }
 
+.status-badge--active #status-text {
+  background: linear-gradient(90deg, #2563EB, #7C3AED, #DB2777, #EA580C, #2563EB);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer-text 3s linear infinite;
+}
+
+@keyframes shimmer-text {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
 .status-badge--inactive {
   background: var(--color-border-light);
   color: var(--color-text-muted);
