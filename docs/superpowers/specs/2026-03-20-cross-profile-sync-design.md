@@ -4,6 +4,8 @@
 
 Add data synchronization across multiple Chrome profiles and Chromium-based browsers (Chrome, Brave, Edge, Arc, etc.) on the same machine. Uses Chrome's Native Messaging mechanism to communicate with a shared native host process that reads/writes a single JSON file on disk. No persistent background service required — the native host is spawned on demand by Chrome and killed when done.
 
+**Platform:** macOS only. Linux and Windows use different `NativeMessagingHosts` paths and are out of scope.
+
 ## Goals
 
 - Sync `AppState` (today's check-in, history, settings) across all Chromium-based browsers on the same machine
@@ -14,9 +16,8 @@ Add data synchronization across multiple Chrome profiles and Chromium-based brow
 ## Architecture
 
 ```
-Chrome Profile A                    Chrome Profile B / Brave / Edge
+Chrome Profile A                    Chrome Profile B / Brave / Edge / Arc
 ┌─────────────────┐                ┌─────────────────┐
-│  background.ts  │                │  background.ts  │
 │  popup.ts       │                │  popup.ts       │
 │  storage.local  │                │  storage.local  │
 └────────┬────────┘                └────────┬────────┘
@@ -37,6 +38,8 @@ Chrome Profile A                    Chrome Profile B / Brave / Edge
 - `chrome.storage.local` — fast cache for the current profile (UI never waits on disk I/O)
 - `~/.worktimer/data.json` — shared source of truth across all profiles and browsers
 
+**Why sync is popup-only (not background):** In MV3, the background context is a Service Worker. `chrome.runtime.sendNativeMessage()` is not available in Service Workers — it is only callable from extension pages (popup, options page). Therefore all native messaging calls originate from `popup.ts`. The background service worker continues to use `chrome.storage.local` exclusively. When the popup opens, it reads from the shared file, merges with local state, and persists the result to `chrome.storage.local` so the background has the latest data.
+
 ## Components
 
 ### 1. Native Host (`native-host/worktimer-host.js`)
@@ -55,7 +58,7 @@ Supported operations:
 // Response: { ok: true } | { ok: false, error: string }
 ```
 
-Writes are atomic: write to `~/.worktimer/data.json.tmp` then rename to `~/.worktimer/data.json` to prevent corruption if two profiles write simultaneously.
+Writes are atomic: write to `~/.worktimer/data.json.tmp` then rename to `~/.worktimer/data.json` to prevent file corruption on concurrent writes. The atomic rename does not prevent a lost-update race if two popups open simultaneously across profiles — this is an accepted trade-off. Last-rename-wins is acceptable for a single-user tool.
 
 If `~/.worktimer/data.json` does not exist, returns `null`. The extension initializes a fresh state in that case.
 
@@ -78,17 +81,21 @@ Each browser requires its own copy of this manifest in its `NativeMessagingHosts
 One-time setup script run after loading the extension. Responsibilities:
 
 - Check that Node.js is available in PATH; exit with a clear error if not
-- Detect which Chromium browsers are installed on the machine:
+- Detect which Chromium browsers are installed on the machine (macOS paths):
   - Chrome: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
   - Brave: `~/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts/`
   - Edge: `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/`
-- For each detected browser, prompt user to enter the extension ID, generate the manifest with the correct `allowed_origins`, and copy to the browser's `NativeMessagingHosts/` directory
+  - Arc: `~/Library/Application Support/Arc/User Data/NativeMessagingHosts/`
+- For each detected browser, prompt user to enter the extension ID, then generate a manifest with:
+  - `allowed_origins` set to `["chrome-extension://<entered-extension-id>/"]`
+  - `path` set to the absolute path of `worktimer-host.js` resolved at install time (e.g. `$(pwd)/native-host/worktimer-host.js`)
+  - Copy the generated manifest to the browser's `NativeMessagingHosts/` directory
 - Create `~/.worktimer/` directory if it does not exist
 - Make `worktimer-host.js` executable (`chmod +x`)
 
 ### 4. Sync Layer (`src/utils/sync.ts`)
 
-Wrapper around `chrome.runtime.sendNativeMessage()`:
+Wrapper around `chrome.runtime.sendNativeMessage()`. Called only from `popup.ts`.
 
 ```typescript
 const HOST_NAME = "com.worktimer.host";
@@ -101,42 +108,54 @@ If the native host is not available (not installed, Node.js missing, any runtime
 
 ### 5. Integration Points
 
-**`background.ts`** — after every check-in creation or settings change:
+**`popup.ts` only** — on popup open, before rendering:
 ```typescript
-await writeSharedState(newState);
-```
-
-**`popup.ts`** — on popup open, before rendering:
-```typescript
-const shared = await readSharedState();
-const local = await getStoredState();
+const shared = await readSharedState();       // from ~/.worktimer/data.json
+const local = await getStoredState();          // from chrome.storage.local
 const merged = mergeStates(shared, local);
-await saveState(merged);
+await saveState(merged);                       // persist to chrome.storage.local
+await writeSharedState(merged);               // write merged state back to shared file
 // render from merged
 ```
 
+**`background.ts`** — no changes. Continues using `chrome.storage.local` exclusively. When the user's popup opens after a background check-in, the popup merge step picks up the new check-in from local storage and propagates it to the shared file.
+
+### 6. Manifest Permission
+
+Add `"nativeMessaging"` to the `permissions` array in `manifest.json`:
+
+```json
+"permissions": ["idle", "storage", "alarms", "notifications", "nativeMessaging"]
+```
+
+Without this permission, all `chrome.runtime.sendNativeMessage()` calls will fail silently.
+
 ## Merge Logic
 
-Last-write-wins based on timestamps. Applied when popup opens and compares shared state from file vs local `chrome.storage.local` state.
+Last-write-wins based on timestamps. Applied in `popup.ts` when comparing shared state from file vs local `chrome.storage.local` state.
 
 ### Today's check-in
+
+Use `lastActiveTimestamp` on `AppState` as the tie-breaker for the overall state freshness. For today's check-in specifically:
 
 ```
 if shared.today is null → use local
 if local.today is null → use shared
-if shared.today.checkInTime > local.today.checkInTime → use shared
-else → use local, write local back to shared file
+if manualOverride is true on shared.today, false on local.today → use shared
+if manualOverride is true on local.today, false on shared.today → use local
+if shared.lastActiveTimestamp > local.lastActiveTimestamp → use shared.today
+else → use local.today
 ```
 
-If `manualOverride = true` on either side, prefer the manually overridden record regardless of timestamp.
+`lastActiveTimestamp` is already maintained by the background service worker on every idle→active event, making it a reliable proxy for "which profile was most recently active". A separate `today.lastModified` field is not needed.
 
 ### History
 
-Merge as union keyed by `date`. For duplicate dates, prefer the record with `manualOverride = true`, otherwise prefer the more recent `checkInTime`. Sort descending by date, trim to 90 entries.
+Merge as union keyed by `date`. For duplicate dates, prefer the record with `manualOverride = true`; if both have `manualOverride = true`, prefer the one with the more recent `checkInTime`. After merge, sort ascending by date (oldest first, consistent with existing `trimHistory()` which uses `slice(-MAX_HISTORY_LENGTH)`), then trim to the last 90 entries to keep the most recent records.
 
 ### Settings
 
-Compare `lastModified` timestamp (add this field to `Settings` interface). Use whichever is newer.
+Compare `Settings.lastModified` timestamp. Use whichever is newer. If either side has `lastModified` missing or `undefined`, treat it as `0` (epoch) — that side loses the comparison.
 
 ## Data Model Changes
 
@@ -146,11 +165,31 @@ Add `lastModified` to `Settings`:
 interface Settings {
   lunchBreakMinutes: number;
   notifyBeforeMinutes: number;
-  lastModified: number;  // timestamp ms, set on every settings save
+  lastModified: number;  // timestamp ms, set on every settings save; default 0
 }
 ```
 
-No other changes to existing data model.
+Update `DEFAULT_SETTINGS`:
+
+```typescript
+const DEFAULT_SETTINGS: Settings = {
+  lunchBreakMinutes: 60,
+  notifyBeforeMinutes: 15,
+  lastModified: 0,
+};
+```
+
+Update `updateSettings()` in `storage.ts` to stamp `Date.now()` into `lastModified` on every call:
+
+```typescript
+async function updateSettings(partial: Partial<Omit<Settings, 'lastModified'>>): Promise<void> {
+  const state = await getStoredState();
+  state.settings = { ...state.settings, ...partial, lastModified: Date.now() };
+  await saveState(state);
+}
+```
+
+Existing stored states read from `chrome.storage.local` or `~/.worktimer/data.json` that predate this change will have `lastModified` as `undefined`. Treat `undefined` as `0` in all merge comparisons — no migration needed.
 
 ## Edge Cases
 
@@ -159,10 +198,11 @@ No other changes to existing data model.
 | Native host not installed | `sync.ts` catches the error, returns `null`, extension uses `chrome.storage.local` only |
 | `~/.worktimer/data.json` missing | Native host returns `null`; extension treats as first-run for sync |
 | Corrupt / invalid JSON in file | Native host returns error; `sync.ts` logs warning, falls back to local state |
-| Two profiles write simultaneously | Atomic write (tmp → rename) prevents partial reads; last rename wins |
+| Two popups open simultaneously | Atomic rename prevents file corruption; last write wins (accepted trade-off) |
 | Different extension IDs across browsers | Each browser gets its own manifest with its own `allowed_origins`; same host binary |
 | Node.js not in PATH | Install script checks and exits with clear error message before registering anything |
-| Firefox | Not supported — Firefox uses a different extension system. Native Messaging protocol is the same but Firefox extensions are separate packages. Out of scope. |
+| `lastModified` undefined (old stored state) | Treat as `0`; other side wins settings comparison |
+| Firefox | Not supported — Firefox extensions are separate packages. Out of scope. |
 
 ## File Structure Changes
 
@@ -171,12 +211,13 @@ reminder/
 ├── native-host/
 │   ├── worktimer-host.js          # Native messaging host (Node.js)
 │   └── com.worktimer.host.json    # Manifest template
-├── install.sh                     # One-time install script
+├── install.sh                     # One-time install script (macOS)
+├── manifest.json                  # add "nativeMessaging" permission
 ├── src/
 │   └── utils/
 │       ├── sync.ts                # NEW: native messaging wrapper
-│       ├── storage.ts             # unchanged
-│       └── types.ts               # add lastModified to Settings
+│       ├── storage.ts             # update updateSettings() to stamp lastModified
+│       └── types.ts               # add lastModified to Settings, update DEFAULT_SETTINGS
 ```
 
 ## Installation Flow (User-facing)
@@ -191,5 +232,6 @@ reminder/
 
 - Real-time sync (polling/file watcher) — on-demand sync is sufficient
 - Firefox support
+- Linux / Windows support
 - Cloud/remote sync
 - Conflict resolution UI — last-write-wins is sufficient for a single-user, single-machine tool
