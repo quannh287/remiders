@@ -411,6 +411,10 @@ body {
   flex: 1;
 }
 
+#btn-test-notify {
+  flex: none;
+}
+
 .footer select {
   padding: 8px 10px;
   border: 1px solid var(--color-border);
