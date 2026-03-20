@@ -1,5 +1,6 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -22,6 +23,33 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+    ],
+  },
+  optimization: {
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            passes: 2,
+            drop_console: ['log'],  // keeps console.error/warn in catch blocks
+            pure_getters: true,
+            unsafe: true,           // safe: no sparse arrays / arguments mutation / prototype changes
+            unsafe_arrows: true,    // safe: no code relies on `this` binding in non-method functions
+          },
+          mangle: {
+            properties: {
+              regex: /^_/,
+              // IMPORTANT: never add properties from types serialized to
+              // chrome.storage.local here — mangling those names corrupts
+              // persisted data on extension update (AppState, CheckInRecord, Settings)
+            },
+          },
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
     ],
   },
   plugins: [
