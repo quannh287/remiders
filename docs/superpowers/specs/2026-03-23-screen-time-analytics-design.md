@@ -70,7 +70,7 @@ src/screen-time/
   - Only tracks when user has checked in (`appState.today !== null`). If not checked in, ignores the event.
   - `active` → create new `currentSession`
   - `idle` / `locked` → close `currentSession`, aggregate into hourly slots, push to `sessions[]`
-- `aggregateToHourlySlots(session)` — split session across hour boundaries (e.g., 9:30-11:15 → 30min in slot 14, 60min in slot 10, 15min in slot 11). Updates `HourlySlotMap` entries, capping each at 60.
+- `aggregateToHourlySlots(session)` — split session across hour boundaries (e.g., 9:30-11:15 → 30min in slot 9, 60min in slot 10, 15min in slot 11). Updates `HourlySlotMap` entries, capping each at 60.
 - `recoverSession()` — called on service worker startup:
   1. Read `screenTimeState.currentSession` from storage
   2. If `currentSession !== null` (orphaned session from killed service worker):
@@ -99,8 +99,10 @@ function initIdleDetection() {
 }
 
 chrome.idle.onStateChanged.addListener((state) => {
-  // Work timer handler (existing logic, only cares about 'active')
-  handleActiveState(state);
+  // Work timer handler (existing logic, only acts on 'active')
+  if (state === 'active') {
+    handleActiveState(); // no argument — existing signature unchanged
+  }
   // Screen time handler (cares about all states)
   handleScreenTimeStateChange(state);
 });
