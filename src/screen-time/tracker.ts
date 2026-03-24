@@ -1,4 +1,4 @@
-import { HourlySlotMap, ScreenSession } from './types';
+import { HourlySlotMap, ScreenSession, ScreenTimeState } from './types';
 
 function formatSlotKey(date: Date): string {
   const y = date.getFullYear();
@@ -29,5 +29,23 @@ export function aggregateToHourlySlots(session: ScreenSession, slots: HourlySlot
     }
 
     cursor = sliceEnd;
+  }
+}
+
+const SESSION_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const SLOT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function trimOldData(state: ScreenTimeState): void {
+  const now = Date.now();
+  const sessionCutoff = now - SESSION_RETENTION_MS;
+  state.sessions = state.sessions.filter((s) => s.start >= sessionCutoff);
+
+  const slotCutoff = now - SLOT_RETENTION_MS;
+  for (const key of Object.keys(state.hourlySlots)) {
+    const datePart = key.substring(0, 10);
+    const slotDate = new Date(datePart + 'T00:00:00').getTime();
+    if (slotDate < slotCutoff) {
+      delete state.hourlySlots[key];
+    }
   }
 }
