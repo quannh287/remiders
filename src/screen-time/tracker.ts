@@ -23,7 +23,7 @@ export function aggregateToHourlySlots(session: ScreenSession, slots: HourlySlot
     hourEnd.setHours(hourEnd.getHours() + 1);
 
     const sliceEnd = Math.min(hourEnd.getTime(), end);
-    const minutes = Math.round((sliceEnd - cursor) / 60000);
+    const minutes = Math.floor((sliceEnd - cursor) / 60000);
 
     if (minutes > 0) {
       const key = formatSlotKey(cursorDate);
@@ -45,7 +45,8 @@ export function trimOldData(state: ScreenTimeState): void {
   const slotCutoff = now - SLOT_RETENTION_MS;
   for (const key of Object.keys(state.hourlySlots)) {
     const datePart = key.substring(0, 10);
-    const slotDate = new Date(datePart + 'T00:00:00').getTime();
+    const [y, m, d] = datePart.split('-').map(Number);
+    const slotDate = new Date(y, m - 1, d).getTime();
     if (slotDate < slotCutoff) {
       delete state.hourlySlots[key];
     }
@@ -57,26 +58,40 @@ export async function getScreenTimeIdleThreshold(): Promise<number> {
   return state.settings.idleThresholdMinutes;
 }
 
+let screenTimeProcessing = false;
+
 export async function handleScreenTimeStateChange(newState: 'active' | 'idle' | 'locked'): Promise<void> {
-  const appState = await getAppState();
-  if (!appState.today) return;
+  if (screenTimeProcessing) return;
+  screenTimeProcessing = true;
+  try {
+    const appState = await getAppState();
+    if (!appState.today) return;
 
-  const state = await getScreenTimeState();
-  const now = Date.now();
+    const state = await getScreenTimeState();
+    const now = Date.now();
 
-  if (newState === 'active') {
-    state.currentSession = { start: now, end: null, type: 'active' };
-  } else {
-    if (state.currentSession && state.currentSession.end === null) {
-      state.currentSession.end = now;
-      aggregateToHourlySlots(state.currentSession, state.hourlySlots);
-      state.sessions.push({ ...state.currentSession });
-      state.currentSession = null;
-      trimOldData(state);
+    if (newState === 'active') {
+      // Close existing open session before creating a new one (e.g., duplicate active events)
+      if (state.currentSession && state.currentSession.end === null) {
+        state.currentSession.end = now;
+        aggregateToHourlySlots(state.currentSession, state.hourlySlots);
+        state.sessions.push({ ...state.currentSession });
+      }
+      state.currentSession = { start: now, end: null, type: 'active' };
+    } else {
+      if (state.currentSession && state.currentSession.end === null) {
+        state.currentSession.end = now;
+        aggregateToHourlySlots(state.currentSession, state.hourlySlots);
+        state.sessions.push({ ...state.currentSession });
+        state.currentSession = null;
+        trimOldData(state);
+      }
     }
-  }
 
-  await setScreenTimeState(state);
+    await setScreenTimeState(state);
+  } finally {
+    screenTimeProcessing = false;
+  }
 }
 
 export async function initScreenTimeTracker(): Promise<void> {
