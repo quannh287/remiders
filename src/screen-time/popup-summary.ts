@@ -31,9 +31,14 @@ export async function renderScreenTimeSummary(
   checkInTime: number | null
 ): Promise<void> {
   const state = await getScreenTimeState();
-  const activeMinutes = getTodayActiveMinutes(state.hourlySlots);
+  let activeMinutes = getTodayActiveMinutes(state.hourlySlots);
 
   const now = Date.now();
+
+  // Include current open session (not yet aggregated to hourly slots)
+  if (state.currentSession && state.currentSession.end === null) {
+    activeMinutes += Math.round((now - state.currentSession.start) / 60000);
+  }
   const totalMinutesSinceCheckIn = checkInTime
     ? Math.round((now - checkInTime) / 60000)
     : 0;
