@@ -7,6 +7,7 @@ module.exports = {
   entry: {
     background: './src/background.ts',
     'popup/popup': './src/popup/popup.ts',
+    'screen-time/dashboard': './src/screen-time/dashboard.ts',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -41,7 +42,8 @@ module.exports = {
               regex: /^_/,
               // IMPORTANT: never add properties from types serialized to
               // chrome.storage.local here — mangling those names corrupts
-              // persisted data on extension update (AppState, CheckInRecord, Settings)
+              // persisted data on extension update (AppState, CheckInRecord, Settings,
+              // ScreenTimeState, ScreenSession, ScreenTimeSettings)
             },
           },
           format: {
@@ -58,6 +60,8 @@ module.exports = {
         { from: 'manifest.json', to: 'manifest.json' },
         { from: 'src/popup/popup.html', to: 'popup/popup.html' },
         { from: 'src/popup/popup.css', to: 'popup/popup.css' },
+        { from: 'src/screen-time/dashboard.html', to: 'screen-time/dashboard.html' },
+        { from: 'src/screen-time/dashboard.css', to: 'screen-time/dashboard.css' },
         { from: 'src/icons', to: 'icons' },
       ],
     }),

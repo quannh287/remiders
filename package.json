@@ -24,5 +24,9 @@
     "typescript": "^5.9.3",
     "webpack": "^5.105.4",
     "webpack-cli": "^7.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "chartjs-chart-matrix": "^3.0.0"
   }
 }
