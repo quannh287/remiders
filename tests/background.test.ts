@@ -17,6 +17,7 @@ let mockState: AppState;
   idle: {
     setDetectionInterval: jest.fn(),
     onStateChanged: { addListener: jest.fn() },
+    queryState: jest.fn(() => Promise.resolve('active')),
   },
   alarms: {
     create: jest.fn(),

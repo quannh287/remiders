@@ -85,6 +85,14 @@ export async function initScreenTimeTracker(): Promise<void> {
   const WORK_TIMER_IDLE_SECONDS = 300;
   chrome.idle.setDetectionInterval(Math.min(WORK_TIMER_IDLE_SECONDS, screenTimeSeconds));
   chrome.alarms.create('screenTimeTrim', { periodInMinutes: 1440 });
+
+  // Create initial active session if user is currently active
+  // chrome.idle.onStateChanged only fires on CHANGES, so on startup
+  // we need to explicitly check and start a session
+  const currentState = await chrome.idle.queryState(Math.min(WORK_TIMER_IDLE_SECONDS, screenTimeSeconds));
+  if (currentState === 'active') {
+    await handleScreenTimeStateChange('active');
+  }
 }
 
 export async function recoverSession(): Promise<void> {

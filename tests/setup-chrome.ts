@@ -10,6 +10,7 @@
   idle: {
     setDetectionInterval: () => {},
     onStateChanged: { addListener: () => {} },
+    queryState: () => Promise.resolve('active'),
   },
   alarms: {
     create: () => {},
