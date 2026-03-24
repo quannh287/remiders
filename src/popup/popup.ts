@@ -1,5 +1,7 @@
 import { getState, setState, updateSettings } from '../utils/storage';
 import { calculateCheckoutTime, AppState, CheckInRecord } from '../utils/types';
+import { renderScreenTimeSummary } from '../screen-time/popup-summary';
+import { getScreenTimeState, updateScreenTimeSettings } from '../screen-time/storage';
 
 // --- Helper functions (exported for testing) ---
 
@@ -196,6 +198,15 @@ function render(state: AppState): void {
 
   // Update clock display immediately
   updateClockProgress();
+
+  // Screen time summary
+  const summaryEl = document.getElementById('screen-time-summary');
+  if (summaryEl && state.today) {
+    summaryEl.classList.remove('hidden');
+    renderScreenTimeSummary(summaryEl, state.today.checkInTime);
+  } else if (summaryEl) {
+    summaryEl.classList.add('hidden');
+  }
 }
 
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -312,6 +323,9 @@ function bindEvents(): void {
         (document.getElementById('setting-lunch') as HTMLInputElement).value = String(state.settings.lunchBreakMinutes);
         (document.getElementById('setting-notify') as HTMLInputElement).value = String(state.settings.notifyBeforeMinutes);
       });
+      getScreenTimeState().then((stState) => {
+        (document.getElementById('setting-idle-threshold') as HTMLInputElement).value = String(stState.settings.idleThresholdMinutes);
+      });
     }
   });
 
@@ -332,6 +346,12 @@ function bindEvents(): void {
       chrome.alarms.create('checkout-reminder', {
         when: state.today.expectedCheckoutTime - notify * 60000,
       });
+    }
+
+    const idleThreshold = parseInt((document.getElementById('setting-idle-threshold') as HTMLInputElement).value);
+    if (!isNaN(idleThreshold) && idleThreshold >= 1 && idleThreshold <= 30) {
+      await updateScreenTimeSettings({ idleThresholdMinutes: idleThreshold });
+      chrome.runtime.sendMessage({ type: 'updateIdleInterval' });
     }
 
     document.getElementById('settings-panel')!.classList.add('hidden');
@@ -367,6 +387,12 @@ function bindEvents(): void {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  });
+
+  // View screen time details
+  document.getElementById('screen-time-details')!.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('screen-time/dashboard.html') });
   });
 
   // Test notification

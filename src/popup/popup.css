@@ -570,6 +570,71 @@ body {
   border-color: var(--color-primary);
 }
 
+/* --- Screen Time Summary --- */
+.screen-time-summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.screen-time-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.screen-time-stat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.screen-time-stat__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.screen-time-stat__value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-time-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 1px;
+  margin-bottom: 8px;
+}
+
+.timeline-block {
+  border-radius: 2px;
+  min-width: 4px;
+}
+
+.screen-time-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.screen-time-link:hover {
+  text-decoration: underline;
+}
+
 /* --- Utility --- */
 .hidden {
   display: none !important;
