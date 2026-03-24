@@ -22,6 +22,19 @@ describe('dashboard stats', () => {
       expect(Object.keys(filtered)).toHaveLength(2);
       expect(filtered['2026-03-10-14']).toBeUndefined();
     });
+
+    it('filters to today only when days === 0', () => {
+      const slots: HourlySlotMap = {
+        '2026-03-23-10': 45,
+        '2026-03-23-14': 20,
+        '2026-03-22-09': 30,
+      };
+      const filtered = filterSlotsByRange(slots, 0);
+      expect(Object.keys(filtered)).toHaveLength(2);
+      expect(filtered['2026-03-23-10']).toBe(45);
+      expect(filtered['2026-03-23-14']).toBe(20);
+      expect(filtered['2026-03-22-09']).toBeUndefined();
+    });
   });
 
   describe('calculateStats', () => {

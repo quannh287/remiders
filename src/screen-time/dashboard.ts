@@ -8,7 +8,7 @@ Chart.register(...registerables, MatrixController, MatrixElement);
 
 document.addEventListener('DOMContentLoaded', () => initDashboard());
 
-let currentRange = 7;
+let currentRange = 0;
 let chartInstance: Chart | null = null;
 
 async function initDashboard(): Promise<void> {
@@ -22,19 +22,27 @@ function renderStats(state: ScreenTimeState, days: number): void {
   const stats = calculateStats(state.hourlySlots, days);
 
   const avgEl = document.getElementById('avg-daily');
+  const avgLabel = document.querySelector('.summary-card:first-child .summary-card__label');
   const peakEl = document.getElementById('peak-hour');
   const vsEl = document.getElementById('today-vs-avg');
+  const vsLabel = document.querySelector('.summary-card:last-child .summary-card__label');
 
   if (avgEl) {
     const h = Math.floor(stats.avgDailyMinutes / 60);
     const m = stats.avgDailyMinutes % 60;
     avgEl.textContent = `${h}h ${m}m`;
   }
+  if (avgLabel) avgLabel.textContent = days === 0 ? 'Total on-screen' : 'Avg on-screen/day';
   if (peakEl) peakEl.textContent = `${stats.peakHour}:00`;
   if (vsEl) {
-    const sign = stats.todayVsAvgPercent >= 0 ? '+' : '';
-    vsEl.textContent = `${sign}${stats.todayVsAvgPercent}%`;
+    if (days === 0) {
+      vsEl.textContent = '--';
+    } else {
+      const sign = stats.todayVsAvgPercent >= 0 ? '+' : '';
+      vsEl.textContent = `${sign}${stats.todayVsAvgPercent}%`;
+    }
   }
+  if (vsLabel) vsLabel.textContent = days === 0 ? 'View' : 'Today vs average';
 }
 
 function renderHeatmap(state: ScreenTimeState, days: number): void {
