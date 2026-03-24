@@ -79,6 +79,14 @@ export async function handleScreenTimeStateChange(newState: 'active' | 'idle' | 
   await setScreenTimeState(state);
 }
 
+export async function initScreenTimeTracker(): Promise<void> {
+  await recoverSession();
+  const screenTimeSeconds = (await getScreenTimeIdleThreshold()) * 60;
+  const WORK_TIMER_IDLE_SECONDS = 300;
+  chrome.idle.setDetectionInterval(Math.min(WORK_TIMER_IDLE_SECONDS, screenTimeSeconds));
+  chrome.alarms.create('screenTimeTrim', { periodInMinutes: 1440 });
+}
+
 export async function recoverSession(): Promise<void> {
   const state = await getScreenTimeState();
   if (!state.currentSession) return;

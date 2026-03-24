@@ -1,5 +1,6 @@
 import { getState, setState, trimHistory } from './utils/storage';
 import { createCheckInRecord, todayDateString, AUTO_CHECKIN_HOUR_START, AUTO_CHECKIN_HOUR_END } from './utils/types';
+import { handleScreenTimeStateChange, initScreenTimeTracker } from './screen-time/tracker';
 
 export function isWithinWorkHours(): boolean {
   const hour = new Date().getHours();
@@ -42,16 +43,26 @@ function createCheckoutAlarm(expectedCheckoutTime: number, notifyBeforeMinutes: 
 
 // --- Service Worker Initialization (top-level) ---
 
-chrome.idle.setDetectionInterval(300);
-
-chrome.idle.onStateChanged.addListener(async (newState: 'active' | 'idle' | 'locked') => {
-  if (newState === 'active') {
+// Unified idle state dispatcher
+chrome.idle.onStateChanged.addListener(async (state: 'active' | 'idle' | 'locked') => {
+  if (state === 'active') {
     await handleActiveState();
   }
+  await handleScreenTimeStateChange(state);
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   await handleActiveState();
+});
+
+// Initialize screen time tracker and idle detection
+initScreenTimeTracker();
+
+// Listen for settings changes from popup
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'updateIdleInterval') {
+    initScreenTimeTracker();
+  }
 });
 
 export async function handleCheckoutAlarm(): Promise<void> {
@@ -82,6 +93,12 @@ export async function verifyAlarmExists(): Promise<void> {
 chrome.alarms.onAlarm.addListener(async (alarm: chrome.alarms.Alarm) => {
   if (alarm.name === 'checkout-reminder') {
     await handleCheckoutAlarm();
+  } else if (alarm.name === 'screenTimeTrim') {
+    const { getScreenTimeState, setScreenTimeState } = await import('./screen-time/storage');
+    const { trimOldData } = await import('./screen-time/tracker');
+    const state = await getScreenTimeState();
+    trimOldData(state);
+    await setScreenTimeState(state);
   }
 });
 
