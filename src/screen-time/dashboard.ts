@@ -15,7 +15,7 @@ async function initDashboard(): Promise<void> {
   const state = await getScreenTimeState();
   renderStats(state, currentRange);
   renderHeatmap(state, currentRange);
-  bindRangeButtons(state);
+  bindRangeButtons();
 }
 
 function renderStats(state: ScreenTimeState, days: number): void {
@@ -114,15 +114,16 @@ function renderHeatmap(state: ScreenTimeState, days: number): void {
   });
 }
 
-function bindRangeButtons(state: ScreenTimeState): void {
+function bindRangeButtons(): void {
   const buttons = document.querySelectorAll('.range-btn');
   buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       buttons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      currentRange = parseInt(btn.getAttribute('data-range') || '7', 10);
-      renderStats(state, currentRange);
-      renderHeatmap(state, currentRange);
+      currentRange = parseInt(btn.getAttribute('data-range') || '0', 10);
+      const freshState = await getScreenTimeState();
+      renderStats(freshState, currentRange);
+      renderHeatmap(freshState, currentRange);
     });
   });
 }

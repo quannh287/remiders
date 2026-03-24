@@ -12,9 +12,17 @@ export interface HeatmapPoint {
   v: number;
 }
 
+// Local-time date string matching formatSlotKey's YYYY-MM-DD format
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function filterSlotsByRange(slots: HourlySlotMap, days: number): HourlySlotMap {
   const now = new Date();
-  const todayStr = now.toISOString().substring(0, 10);
+  const todayStr = localDateStr(now);
 
   // days === 0 means "today only"
   if (days === 0) {
@@ -29,8 +37,9 @@ export function filterSlotsByRange(slots: HourlySlotMap, days: number): HourlySl
 
   const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().substring(0, 10);
+  const cutoffStr = localDateStr(cutoff);
 
+  // String comparison works because YYYY-MM-DD is lexicographically sortable
   const filtered: HourlySlotMap = {};
   for (const [key, val] of Object.entries(slots)) {
     const datePart = key.substring(0, 10);
@@ -67,7 +76,7 @@ export function calculateStats(slots: HourlySlotMap, days: number): DashboardSta
     }
   }
 
-  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayStr = localDateStr(new Date());
   const todayTotal = dayTotals[todayStr] || 0;
   const otherDays = dayEntries.filter(([d]) => d !== todayStr);
   const otherAvg = otherDays.length > 0
