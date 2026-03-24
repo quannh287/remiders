@@ -1,4 +1,6 @@
 import { HourlySlotMap, ScreenSession, ScreenTimeState } from './types';
+import { getScreenTimeState, setScreenTimeState } from './storage';
+import { getState as getAppState } from '../utils/storage';
 
 function formatSlotKey(date: Date): string {
   const y = date.getFullYear();
@@ -48,4 +50,56 @@ export function trimOldData(state: ScreenTimeState): void {
       delete state.hourlySlots[key];
     }
   }
+}
+
+export async function getScreenTimeIdleThreshold(): Promise<number> {
+  const state = await getScreenTimeState();
+  return state.settings.idleThresholdMinutes;
+}
+
+export async function handleScreenTimeStateChange(newState: 'active' | 'idle' | 'locked'): Promise<void> {
+  const appState = await getAppState();
+  if (!appState.today) return;
+
+  const state = await getScreenTimeState();
+  const now = Date.now();
+
+  if (newState === 'active') {
+    state.currentSession = { start: now, end: null, type: 'active' };
+  } else {
+    if (state.currentSession && state.currentSession.end === null) {
+      state.currentSession.end = now;
+      aggregateToHourlySlots(state.currentSession, state.hourlySlots);
+      state.sessions.push({ ...state.currentSession });
+      state.currentSession = null;
+      trimOldData(state);
+    }
+  }
+
+  await setScreenTimeState(state);
+}
+
+export async function recoverSession(): Promise<void> {
+  const state = await getScreenTimeState();
+  if (!state.currentSession) return;
+
+  const appState = await getAppState();
+  const lastActive = appState.lastActiveTimestamp;
+  const sessionStartDate = new Date(state.currentSession.start).toDateString();
+  const lastActiveDate = new Date(lastActive).toDateString();
+  const todayDate = appState.today ? new Date(appState.today.date).toDateString() : null;
+
+  if (
+    lastActive > 0 &&
+    sessionStartDate === lastActiveDate &&
+    todayDate !== null &&
+    sessionStartDate === todayDate
+  ) {
+    state.currentSession.end = lastActive;
+    aggregateToHourlySlots(state.currentSession, state.hourlySlots);
+    state.sessions.push({ ...state.currentSession });
+  }
+
+  state.currentSession = null;
+  await setScreenTimeState(state);
 }
