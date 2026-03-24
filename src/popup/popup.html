@@ -164,6 +164,22 @@
       </div>
     </div>
 
+    <!-- Screen Time Summary -->
+    <div class="screen-time-summary" id="screen-time-summary">
+      <div class="screen-time-stats">
+        <div class="screen-time-stat">
+          <span class="screen-time-stat__label">On screen</span>
+          <span class="screen-time-stat__value" id="screen-time-on">0h 0m</span>
+        </div>
+        <div class="screen-time-stat">
+          <span class="screen-time-stat__label">Off screen</span>
+          <span class="screen-time-stat__value" id="screen-time-off">0h 0m</span>
+        </div>
+      </div>
+      <div class="screen-time-bar" id="screen-time-bar"></div>
+      <a href="#" class="screen-time-link" id="screen-time-details">View details</a>
+    </div>
+
     </div> <!-- /main-content -->
 
     <!-- Edit Check-in (hidden by default) -->
@@ -229,6 +245,10 @@
       <div class="setting-row">
         <label for="setting-notify">Notify before (minutes)</label>
         <input type="number" id="setting-notify" min="1" max="60">
+      </div>
+      <div class="setting-row">
+        <label for="setting-idle-threshold">Idle threshold (minutes)</label>
+        <input type="number" id="setting-idle-threshold" min="1" max="30">
       </div>
       <div class="settings-actions">
         <button class="btn btn--primary btn--sm" id="btn-save-settings">Save Settings</button>
