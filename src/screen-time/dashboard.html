@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Screen Time Analytics</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="dashboard">
+    <header class="dashboard-header">
+      <h1>Screen Time Analytics</h1>
+      <div class="date-range-selector">
+        <button class="range-btn active" data-range="7">7d</button>
+        <button class="range-btn" data-range="30">30d</button>
+        <button class="range-btn" data-range="90">90d</button>
+      </div>
+    </header>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-card__label">Avg on-screen/day</div>
+        <div class="summary-card__value" id="avg-daily">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card__label">Peak hour</div>
+        <div class="summary-card__value" id="peak-hour">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card__label">Today vs average</div>
+        <div class="summary-card__value" id="today-vs-avg">--</div>
+      </div>
+    </div>
+
+    <div class="heatmap-container">
+      <canvas id="heatmap-canvas"></canvas>
+    </div>
+
+    <div class="daily-detail hidden" id="daily-detail">
+      <h2 id="detail-date"></h2>
+      <div class="detail-bar" id="detail-bar"></div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
