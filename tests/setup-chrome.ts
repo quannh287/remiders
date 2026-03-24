@@ -24,5 +24,11 @@
   runtime: {
     onInstalled: { addListener: () => {} },
     onStartup: { addListener: () => {} },
+    onMessage: { addListener: () => {} },
+    getURL: (path: string) => `chrome-extension://test/${path}`,
+    sendMessage: () => Promise.resolve(),
+  },
+  tabs: {
+    create: () => Promise.resolve({}),
   },
 };
