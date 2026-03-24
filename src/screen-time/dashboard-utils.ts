@@ -13,7 +13,21 @@ export interface HeatmapPoint {
 }
 
 export function filterSlotsByRange(slots: HourlySlotMap, days: number): HourlySlotMap {
-  const cutoff = new Date();
+  const now = new Date();
+  const todayStr = now.toISOString().substring(0, 10);
+
+  // days === 0 means "today only"
+  if (days === 0) {
+    const filtered: HourlySlotMap = {};
+    for (const [key, val] of Object.entries(slots)) {
+      if (key.substring(0, 10) === todayStr) {
+        filtered[key] = val;
+      }
+    }
+    return filtered;
+  }
+
+  const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().substring(0, 10);
 
