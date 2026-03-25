@@ -1,7 +1,7 @@
-import { calculateStats, filterSlotsByRange, transformForHeatmap } from '../../src/screen-time/dashboard-utils';
-import { HourlySlotMap } from '../../src/screen-time/types';
+import { calculateStats, filterSlotsByRange, calculateTodaySessionStats, transformForBarChart, transformForDailyBarChart } from '../../src/screen-time/dashboard-utils';
+import { HourlySlotMap, DailyAggregate, ScreenSession } from '../../src/screen-time/types';
 
-describe('dashboard stats', () => {
+describe('dashboard utils', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-23T12:00:00'));
@@ -33,50 +33,98 @@ describe('dashboard stats', () => {
       expect(Object.keys(filtered)).toHaveLength(2);
       expect(filtered['2026-03-23-10']).toBe(45);
       expect(filtered['2026-03-23-14']).toBe(20);
-      expect(filtered['2026-03-22-09']).toBeUndefined();
     });
   });
 
   describe('calculateStats', () => {
-    it('calculates average daily minutes', () => {
+    it('calculates average daily minutes and peak hour', () => {
       const slots: HourlySlotMap = {
         '2026-03-23-10': 30,
         '2026-03-23-11': 30,
         '2026-03-22-10': 60,
       };
-      const stats = calculateStats(slots, 7);
+      const aggregates: DailyAggregate[] = [
+        { date: '2026-03-23', totalMinutes: 60, sessionCount: 3, breakCount: 2 },
+        { date: '2026-03-22', totalMinutes: 60, sessionCount: 2, breakCount: 1 },
+      ];
+      const stats = calculateStats(slots, 7, aggregates);
       expect(stats.avgDailyMinutes).toBe(60);
+      expect(stats.peakHour).toBe(10);
     });
 
-    it('finds peak hour', () => {
+    it('computes avg sessions and breaks from aggregates for multi-day', () => {
       const slots: HourlySlotMap = {
-        '2026-03-23-14': 50,
-        '2026-03-22-14': 55,
-        '2026-03-23-10': 20,
+        '2026-03-23-10': 30,
+        '2026-03-22-10': 60,
       };
-      const stats = calculateStats(slots, 7);
-      expect(stats.peakHour).toBe(14);
-    });
-
-    it('calculates today vs average', () => {
-      const slots: HourlySlotMap = {
-        '2026-03-23-10': 60,
-        '2026-03-22-10': 30,
-        '2026-03-21-10': 30,
-      };
-      const stats = calculateStats(slots, 7);
-      expect(stats.todayVsAvgPercent).toBeGreaterThan(0);
+      const aggregates: DailyAggregate[] = [
+        { date: '2026-03-23', totalMinutes: 30, sessionCount: 4, breakCount: 3 },
+        { date: '2026-03-22', totalMinutes: 60, sessionCount: 6, breakCount: 5 },
+      ];
+      const stats = calculateStats(slots, 7, aggregates);
+      expect(stats.avgSessionsPerDay).toBe(5);   // (4+6)/2
+      expect(stats.avgBreaksPerDay).toBe(4);     // (3+5)/2
     });
   });
 
-  describe('transformForHeatmap', () => {
-    it('transforms slots to chart.js matrix data', () => {
+  describe('calculateTodaySessionStats', () => {
+    it('counts active sessions and breaks for today', () => {
+      const sessions: ScreenSession[] = [
+        { start: new Date('2026-03-23T09:00:00').getTime(), end: new Date('2026-03-23T10:00:00').getTime(), type: 'active' },
+        { start: new Date('2026-03-23T10:00:00').getTime(), end: new Date('2026-03-23T10:30:00').getTime(), type: 'idle' },
+        { start: new Date('2026-03-23T10:30:00').getTime(), end: new Date('2026-03-23T12:00:00').getTime(), type: 'active' },
+      ];
+      const result = calculateTodaySessionStats(sessions, null);
+      expect(result.sessionCount).toBe(2);
+      expect(result.breakCount).toBe(1);
+    });
+
+    it('includes currentSession if open', () => {
+      const sessions: ScreenSession[] = [
+        { start: new Date('2026-03-23T09:00:00').getTime(), end: new Date('2026-03-23T10:00:00').getTime(), type: 'active' },
+      ];
+      const current: ScreenSession = {
+        start: new Date('2026-03-23T11:00:00').getTime(), end: null, type: 'active',
+      };
+      const result = calculateTodaySessionStats(sessions, current);
+      expect(result.sessionCount).toBe(2);
+      expect(result.breakCount).toBe(1);
+    });
+
+    it('ignores non-active sessions', () => {
+      const sessions: ScreenSession[] = [
+        { start: new Date('2026-03-23T09:00:00').getTime(), end: new Date('2026-03-23T10:00:00').getTime(), type: 'idle' },
+        { start: new Date('2026-03-23T10:00:00').getTime(), end: new Date('2026-03-23T11:00:00').getTime(), type: 'active' },
+      ];
+      const result = calculateTodaySessionStats(sessions, null);
+      expect(result.sessionCount).toBe(1);
+      expect(result.breakCount).toBe(0);
+    });
+  });
+
+  describe('transformForBarChart', () => {
+    it('transforms hourly slots to bar chart data', () => {
       const slots: HourlySlotMap = {
+        '2026-03-23-09': 30,
         '2026-03-23-14': 45,
       };
-      const data = transformForHeatmap(slots);
-      expect(data).toHaveLength(1);
-      expect(data[0]).toEqual({ x: '2026-03-23', y: 14, v: 45 });
+      const data = transformForBarChart(slots);
+      expect(data.labels).toEqual(['9', '14']);
+      expect(data.values).toEqual([30, 45]);
+    });
+  });
+
+  describe('transformForDailyBarChart', () => {
+    it('transforms hourly slots to daily totals', () => {
+      const slots: HourlySlotMap = {
+        '2026-03-22-09': 30,
+        '2026-03-22-14': 20,
+        '2026-03-23-10': 45,
+      };
+      const data = transformForDailyBarChart(slots);
+      expect(data.labels).toEqual(['2026-03-22', '2026-03-23']);
+      expect(data.values).toEqual([50, 45]);
+      expect(data.average).toBe(48); // round((50+45)/2)
     });
   });
 });
