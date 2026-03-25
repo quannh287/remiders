@@ -28,20 +28,22 @@ The current Screen Time Analytics dashboard is hard to read and provides little 
 ### Metric Cards (4 cards)
 
 **Today view:**
-| Card | Label | Value example |
-|------|-------|---------------|
-| 1 | Total on-screen | 3h 42m |
-| 2 | Peak hour | 10:00 |
-| 3 | Sessions | 6 |
-| 4 | Breaks | 5 |
+| Card | Label | Value example | Source |
+|------|-------|---------------|--------|
+| 1 | Total on-screen | 3h 42m | hourly slots for today |
+| 2 | Peak hour | 10:00 | hourly slots for today |
+| 3 | Sessions | 6 | count active sessions from `sessions[]` array for today (always within 7-day retention) + 1 if `currentSession` is open |
+| 4 | Breaks | 5 | `sessionCount - 1` (capped at 0) — a break is a gap between two active sessions |
 
 **Multi-day view (7d/30d/90d):**
-| Card | Label | Value example |
-|------|-------|---------------|
-| 1 | Avg on-screen/day | 4h 15m |
-| 2 | Peak hour | 10:00 |
-| 3 | Avg sessions/day | 5.3 |
-| 4 | Avg breaks/day | 4.3 |
+| Card | Label | Value example | Source |
+|------|-------|---------------|--------|
+| 1 | Avg on-screen/day | 4h 15m | hourly slots (same as current `calculateStats`) |
+| 2 | Peak hour | 10:00 | hourly slots |
+| 3 | Avg sessions/day | 5.3 | `dailyAggregates` |
+| 4 | Avg breaks/day | 4.3 | `dailyAggregates` |
+
+**Drill-down panel** (multi-day view, on click): reads session/break counts from `dailyAggregates` for the selected date. If the selected date is today, uses live computation from `sessions[]` (same as Today view).
 
 ### Data Model Changes
 
@@ -58,11 +60,17 @@ interface DailyAggregate {
 
 Add `dailyAggregates: DailyAggregate[]` to `ScreenTimeState`. Bump `schemaVersion` from 1 to 2.
 
-**When to update:** Each time a session ends (in `handleScreenTimeStateChange` when transitioning away from active), upsert the daily aggregate for that date — increment `sessionCount`, recompute `totalMinutes` from hourly slots for that date, and derive `breakCount` as `sessionCount - 1` (capped at 0).
+**Definitions:**
+- `sessionCount` counts only **active** sessions (type `'active'`). Idle/locked sessions are not counted.
+- `breakCount` = `sessionCount - 1` (capped at 0). A "break" is defined as a gap (idle or locked period) between two consecutive active sessions in the same day.
+
+**When to update:** Each time an active session ends (in `handleScreenTimeStateChange` when transitioning away from active), upsert the daily aggregate for that date — increment `sessionCount`, recompute `totalMinutes` from hourly slots for that date, and derive `breakCount` as `sessionCount - 1` (capped at 0).
 
 **Retention:** Trim daily aggregates at the same 90-day cutoff as hourly slots (in `trimOldData`).
 
-**Migration:** On load, if `schemaVersion < 2` and `dailyAggregates` is missing, initialize it as `[]`. Existing hourly slot data can be used to backfill `totalMinutes` per day, but `sessionCount`/`breakCount` cannot be recovered for past days (sessions older than 7 days are already trimmed).
+**Migration:** On load, if `schemaVersion < 2` and `dailyAggregates` is missing, initialize it as `[]`. Backfill `totalMinutes` from existing hourly slots for all dates present. `sessionCount`/`breakCount` cannot be recovered for dates older than 7 days (sessions already trimmed), so set them to `0` for those dates. For dates within the 7-day session window, compute from the `sessions[]` array.
+
+**Note:** The `DashboardStats.todayVsAvgPercent` field is removed as the 3rd metric card is replaced by Sessions. The average line on the multi-day bar chart does not appear on the Today hourly chart.
 
 ### Chart Library
 
