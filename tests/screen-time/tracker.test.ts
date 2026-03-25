@@ -1,4 +1,4 @@
-import { aggregateToHourlySlots, trimOldData } from '../../src/screen-time/tracker';
+import { aggregateToHourlySlots, trimOldData, upsertDailyAggregate } from '../../src/screen-time/tracker';
 import { HourlySlotMap, ScreenSession, createDefaultScreenTimeState } from '../../src/screen-time/types';
 
 describe('aggregateToHourlySlots', () => {
@@ -46,6 +46,39 @@ describe('aggregateToHourlySlots', () => {
     };
     aggregateToHourlySlots(session, slots);
     expect(Object.keys(slots)).toHaveLength(0);
+  });
+});
+
+describe('upsertDailyAggregate', () => {
+  it('creates new aggregate for a date', () => {
+    const state = createDefaultScreenTimeState();
+    state.hourlySlots = { '2026-03-25-10': 45, '2026-03-25-11': 30 };
+    upsertDailyAggregate(state, '2026-03-25');
+    expect(state.dailyAggregates).toHaveLength(1);
+    expect(state.dailyAggregates[0]).toEqual({
+      date: '2026-03-25',
+      totalMinutes: 75,
+      sessionCount: 1,
+      breakCount: 0,
+    });
+  });
+
+  it('increments sessionCount on existing aggregate', () => {
+    const state = createDefaultScreenTimeState();
+    state.dailyAggregates = [{ date: '2026-03-25', totalMinutes: 45, sessionCount: 1, breakCount: 0 }];
+    state.hourlySlots = { '2026-03-25-10': 45, '2026-03-25-14': 30 };
+    upsertDailyAggregate(state, '2026-03-25');
+    expect(state.dailyAggregates[0].sessionCount).toBe(2);
+    expect(state.dailyAggregates[0].breakCount).toBe(1);
+    expect(state.dailyAggregates[0].totalMinutes).toBe(75);
+  });
+
+  it('recomputes totalMinutes from hourly slots', () => {
+    const state = createDefaultScreenTimeState();
+    state.dailyAggregates = [{ date: '2026-03-25', totalMinutes: 30, sessionCount: 1, breakCount: 0 }];
+    state.hourlySlots = { '2026-03-25-10': 45, '2026-03-25-11': 60 };
+    upsertDailyAggregate(state, '2026-03-25');
+    expect(state.dailyAggregates[0].totalMinutes).toBe(105);
   });
 });
 

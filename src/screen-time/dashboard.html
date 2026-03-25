@@ -19,26 +19,33 @@
 
     <div class="summary-cards">
       <div class="summary-card">
-        <div class="summary-card__label">Avg on-screen/day</div>
-        <div class="summary-card__value" id="avg-daily">--</div>
+        <div class="summary-card__label" id="label-time">Total on-screen</div>
+        <div class="summary-card__value" id="stat-time">--</div>
       </div>
       <div class="summary-card">
         <div class="summary-card__label">Peak hour</div>
-        <div class="summary-card__value" id="peak-hour">--</div>
+        <div class="summary-card__value" id="stat-peak">--</div>
       </div>
       <div class="summary-card">
-        <div class="summary-card__label">Today vs average</div>
-        <div class="summary-card__value" id="today-vs-avg">--</div>
+        <div class="summary-card__label" id="label-sessions">Sessions</div>
+        <div class="summary-card__value" id="stat-sessions">--</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card__label" id="label-breaks">Breaks</div>
+        <div class="summary-card__value" id="stat-breaks">--</div>
       </div>
     </div>
 
-    <div class="heatmap-container">
-      <canvas id="heatmap-canvas"></canvas>
+    <div class="chart-container">
+      <canvas id="chart-canvas"></canvas>
     </div>
 
-    <div class="daily-detail hidden" id="daily-detail">
-      <h2 id="detail-date"></h2>
-      <div class="detail-bar" id="detail-bar"></div>
+    <div class="drill-down hidden" id="drill-down">
+      <div class="drill-down__header">
+        <h2 id="drill-down-date"></h2>
+        <span class="drill-down__summary" id="drill-down-summary"></span>
+      </div>
+      <canvas id="drill-down-canvas"></canvas>
     </div>
   </div>
 
