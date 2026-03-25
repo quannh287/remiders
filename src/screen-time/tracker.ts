@@ -1,4 +1,4 @@
-import { HourlySlotMap, ScreenSession, ScreenTimeState } from './types';
+import { DailyAggregate, HourlySlotMap, ScreenSession, ScreenTimeState } from './types';
 import { getScreenTimeState, setScreenTimeState } from './storage';
 import { getState as getAppState } from '../utils/storage';
 
@@ -34,6 +34,38 @@ export function aggregateToHourlySlots(session: ScreenSession, slots: HourlySlot
   }
 }
 
+export function upsertDailyAggregate(state: ScreenTimeState, dateStr: string): void {
+  // Recompute totalMinutes from hourly slots for this date
+  let totalMinutes = 0;
+  for (const [key, val] of Object.entries(state.hourlySlots)) {
+    if (key.substring(0, 10) === dateStr) {
+      totalMinutes += val;
+    }
+  }
+
+  const existing = state.dailyAggregates.find((a) => a.date === dateStr);
+  if (existing) {
+    existing.sessionCount += 1;
+    existing.breakCount = Math.max(0, existing.sessionCount - 1);
+    existing.totalMinutes = totalMinutes;
+  } else {
+    state.dailyAggregates.push({
+      date: dateStr,
+      totalMinutes,
+      sessionCount: 1,
+      breakCount: 0,
+    });
+  }
+}
+
+function dateStrFromTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const SESSION_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const SLOT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -51,6 +83,10 @@ export function trimOldData(state: ScreenTimeState): void {
       delete state.hourlySlots[key];
     }
   }
+
+  const cutoffDate = new Date(now - SLOT_RETENTION_MS);
+  const slotCutoffStr = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth() + 1).padStart(2, '0')}-${String(cutoffDate.getDate()).padStart(2, '0')}`;
+  state.dailyAggregates = state.dailyAggregates.filter((a) => a.date >= slotCutoffStr);
 }
 
 export async function getScreenTimeIdleThreshold(): Promise<number> {
@@ -76,6 +112,9 @@ export async function handleScreenTimeStateChange(newState: 'active' | 'idle' | 
         state.currentSession.end = now;
         aggregateToHourlySlots(state.currentSession, state.hourlySlots);
         state.sessions.push({ ...state.currentSession });
+        if (state.currentSession.type === 'active') {
+          upsertDailyAggregate(state, dateStrFromTimestamp(state.currentSession.start));
+        }
       }
       state.currentSession = { start: now, end: null, type: 'active' };
     } else {
@@ -83,6 +122,9 @@ export async function handleScreenTimeStateChange(newState: 'active' | 'idle' | 
         state.currentSession.end = now;
         aggregateToHourlySlots(state.currentSession, state.hourlySlots);
         state.sessions.push({ ...state.currentSession });
+        if (state.currentSession.type === 'active') {
+          upsertDailyAggregate(state, dateStrFromTimestamp(state.currentSession.start));
+        }
         state.currentSession = null;
         trimOldData(state);
       }
