@@ -171,6 +171,9 @@ export async function recoverSession(): Promise<void> {
     state.currentSession.end = lastActive;
     aggregateToHourlySlots(state.currentSession, state.hourlySlots);
     state.sessions.push({ ...state.currentSession });
+    if (state.currentSession.type === 'active') {
+      upsertDailyAggregate(state, dateStrFromTimestamp(state.currentSession.start));
+    }
   }
 
   state.currentSession = null;

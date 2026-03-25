@@ -92,8 +92,8 @@ export function calculateStats(slots: HourlySlotMap, days: number, aggregates: D
   return {
     avgDailyMinutes,
     peakHour,
-    avgSessionsPerDay: Math.round(totalSessions / aggCount),
-    avgBreaksPerDay: Math.round(totalBreaks / aggCount),
+    avgSessionsPerDay: parseFloat((totalSessions / aggCount).toFixed(1)),
+    avgBreaksPerDay: parseFloat((totalBreaks / aggCount).toFixed(1)),
   };
 }
 
