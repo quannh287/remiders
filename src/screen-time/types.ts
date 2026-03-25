@@ -10,12 +10,20 @@ export interface ScreenTimeSettings {
   idleThresholdMinutes: number;
 }
 
+export interface DailyAggregate {
+  date: string;           // "YYYY-MM-DD"
+  totalMinutes: number;
+  sessionCount: number;
+  breakCount: number;
+}
+
 export interface ScreenTimeState {
   sessions: ScreenSession[];
   hourlySlots: HourlySlotMap;
   currentSession: ScreenSession | null;
   settings: ScreenTimeSettings;
   schemaVersion: number;
+  dailyAggregates: DailyAggregate[];
 }
 
 export const DEFAULT_SCREEN_TIME_SETTINGS: ScreenTimeSettings = {
@@ -28,6 +36,7 @@ export function createDefaultScreenTimeState(): ScreenTimeState {
     hourlySlots: {},
     currentSession: null,
     settings: { ...DEFAULT_SCREEN_TIME_SETTINGS },
-    schemaVersion: 1,
+    schemaVersion: 2,
+    dailyAggregates: [],
   };
 }
