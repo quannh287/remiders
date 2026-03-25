@@ -131,7 +131,7 @@ export function transformForBarChart(slots: HourlySlotMap): BarChartData {
     .sort((a, b) => a.hour - b.hour);
 
   return {
-    labels: entries.map((e) => String(e.hour)),
+    labels: entries.map((e) => `${e.hour}:00`),
     values: entries.map((e) => e.val),
   };
 }

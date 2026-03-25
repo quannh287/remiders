@@ -94,11 +94,20 @@ function renderHourlyBarChart(canvas: HTMLCanvasElement, slots: HourlySlotMap): 
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: true, max: 60, ticks: { stepSize: 15 } },
-        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 60,
+          ticks: { stepSize: 15 },
+          title: { display: true, text: 'Minutes' },
+        },
+        x: {
+          grid: { display: false },
+          title: { display: true, text: 'Hour of day' },
+        },
       },
       plugins: {
         legend: { display: false },
+        title: { display: true, text: 'Hourly Active Time', font: { size: 14 } },
         tooltip: {
           callbacks: {
             label: (ctx) => `${ctx.parsed.y} min active`,
@@ -134,11 +143,19 @@ function renderDailyBarChart(
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: true },
-        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Minutes' },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 } },
+          title: { display: true, text: 'Date' },
+        },
       },
       plugins: {
         legend: { display: false },
+        title: { display: true, text: 'Daily Active Time', font: { size: 14 } },
         tooltip: {
           callbacks: {
             label: (ctx) => {
@@ -247,10 +264,21 @@ function showDrillDown(dateStr: string, state: ScreenTimeState, days: number): v
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        y: { beginAtZero: true, max: 60, ticks: { stepSize: 15 } },
-        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 60,
+          ticks: { stepSize: 15 },
+          title: { display: true, text: 'Minutes' },
+        },
+        x: {
+          grid: { display: false },
+          title: { display: true, text: 'Hour of day' },
+        },
       },
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Hourly Active Time', font: { size: 14 } },
+      },
     },
   });
 }

@@ -109,7 +109,7 @@ describe('dashboard utils', () => {
         '2026-03-23-14': 45,
       };
       const data = transformForBarChart(slots);
-      expect(data.labels).toEqual(['9', '14']);
+      expect(data.labels).toEqual(['9:00', '14:00']);
       expect(data.values).toEqual([30, 45]);
     });
   });
